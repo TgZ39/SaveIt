@@ -1,13 +1,12 @@
 use crate::database::{establish_connection, get_all_sources, insert_source, Source};
 use arboard::Clipboard;
-use chrono::{Local, NaiveDate};
-use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{FontId, Grid, TextFormat, Ui};
+use egui::{FontId, Grid, Ui};
 use egui_extras::DatePickerButton;
 use futures::executor;
 use std::fmt::{Display, Formatter};
+use chrono::{Local, NaiveDate};
 
 pub fn open_gui() -> Result<(), eframe::Error> {
     // set up logging
@@ -33,11 +32,12 @@ pub struct Application {
     pub input_author: String,
     pub input_date: NaiveDate,
     curr_page: AppPage,
-    sources_cache: Vec<Source>,
+    sources_cache: Vec<Source>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (~60/s)
 }
 
 impl Application {
     fn new(ctx: &egui::Context) -> Self {
+        // make font bigger
         configure_fonts(ctx);
 
         Self {
@@ -49,6 +49,7 @@ impl Application {
         }
     }
 
+    // get input source from user
     fn get_source(&self) -> Source {
         Source {
             url: self.input_url.clone(),
@@ -57,7 +58,9 @@ impl Application {
         }
     }
 
+    // save input source to DB
     pub fn handle_source_save(&self) {
+        // run async fn in sync code ¯\_(ツ)_/¯
         executor::block_on(async {
             let source = self.get_source();
 
@@ -70,6 +73,7 @@ impl Application {
         });
     }
 
+    // clears text fields and reset date to now
     fn clear_input(&mut self) {
         self.input_url.clear();
         self.input_author.clear();
@@ -101,22 +105,27 @@ impl Display for AppPage {
 }
 
 impl eframe::App for Application {
+    // runs every frame
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             // Page selection
             ui.horizontal(|ui| {
+                // Start page
                 ui.selectable_value(
                     &mut self.curr_page,
                     AppPage::Start,
                     AppPage::Start.to_string(),
                 );
-                let page = ui.selectable_value(
+
+                // List page
+                let list_page = ui.selectable_value(
                     &mut self.curr_page,
                     AppPage::List,
                     AppPage::List.to_string(),
                 );
 
-                if page.clicked() {
+                if list_page.clicked() {
+                    // update source cache
                     executor::block_on(async {
                         let mut conn = establish_connection()
                             .await
@@ -128,6 +137,7 @@ impl eframe::App for Application {
                     });
                 }
 
+                // Settings page
                 ui.selectable_value(
                     &mut self.curr_page,
                     AppPage::Settings,
@@ -136,6 +146,8 @@ impl eframe::App for Application {
             });
 
             ui.separator();
+
+            // render selected page
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
                 AppPage::List => render_list_page(ui, &self.sources_cache),
@@ -148,15 +160,19 @@ impl eframe::App for Application {
 fn render_start_page(app: &mut Application, ui: &mut Ui) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
         let url_label = ui.label("URL: ");
+
+        // input URL
         ui.text_edit_singleline(&mut app.input_url)
             .labelled_by(url_label.id);
         ui.end_row();
 
+        // input author
         let author_label = ui.label("Author: ");
         ui.text_edit_singleline(&mut app.input_author)
             .labelled_by(author_label.id);
         ui.end_row();
 
+        // input date
         let date_label = ui.label("Date: ");
         ui.add(DatePickerButton::new(&mut app.input_date))
             .labelled_by(date_label.id);
@@ -166,10 +182,12 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
     ui.add_space(10.0);
 
     ui.horizontal(|ui| {
+        // save input source to DB
         if ui.button("Save").clicked() {
             app.handle_source_save();
         }
 
+        // clear input
         if ui.button("Clear").clicked() {
             app.clear_input();
         }
@@ -181,7 +199,7 @@ fn configure_fonts(ctx: &egui::Context) {
 
     style.text_styles = [
         (Heading, FontId::default()),
-        (Body, FontId::new(15.0, Proportional)),
+        (Body, FontId::new(15.0, Proportional)), // TODO making fontsize above 15 breaks date selection popup
         (Monospace, FontId::default()),
         (Button, FontId::default()),
         (Small, FontId::default()),
@@ -202,28 +220,18 @@ fn render_list_page(ui: &mut Ui, sources: &Vec<Source>) {
         .auto_shrink(false)
         .drag_to_scroll(true)
         .show(ui, |ui| {
+            // fancy table
             Grid::new("SourceList")
                 .striped(true)
                 .num_columns(2)
                 .show(ui, |ui| {
                     for source in sources {
-                        let mut job = LayoutJob::single_section(
-                            source.url.to_string(),
-                            TextFormat::default(),
-                        );
-
-                        job.wrap = egui::text::TextWrapping {
-                            max_width: 100.0,
-                            max_rows: 1,
-                            break_anywhere: true,
-                            overflow_character: Some('…'),
-                        };
-
+                        // copy source to clipboard
                         if ui.button("Copy").clicked() {
                             set_clipboard(source)
                         }
-                        ui.label(job);
-
+                        // show URL
+                        ui.label(source.url.to_string());
                         ui.end_row()
                     }
                 });

@@ -12,7 +12,7 @@ const DATABASE_NAME: &str = "sources.db";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // setup logging
+    // setup logging (tracing)
     let subscriber = tracing_subscriber::fmt()
         .with_file(false)
         .with_line_number(false)
@@ -26,11 +26,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = establish_connection()
         .await
         .expect("Error connection to database.");
+
+    // setup table
     sqlx::migrate!("./migrations")
         .run(&mut conn)
         .await
         .expect("Error executing database migrations.");
 
+    // open GUI
     info!("Opening GUI");
     open_gui().expect("Error opening GUI");
 
