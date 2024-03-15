@@ -69,6 +69,12 @@ impl Application {
                 .expect("Error inserting source in database.");
         });
     }
+
+    fn clear_input(&mut self) {
+        self.input_url.clear();
+        self.input_author.clear();
+        self.input_date = NaiveDate::from(Local::now().naive_local());
+    }
 }
 
 #[derive(PartialOrd, PartialEq)]
@@ -157,11 +163,17 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         ui.end_row();
     });
 
-    let save_button = ui.button("Save");
+    ui.add_space(10.0);
 
-    if save_button.clicked() {
-        app.handle_source_save()
-    }
+    ui.horizontal(|ui| {
+        if ui.button("Save").clicked() {
+            app.handle_source_save();
+        }
+
+        if ui.button("Clear").clicked() {
+            app.clear_input();
+        }
+    });
 }
 
 fn configure_fonts(ctx: &egui::Context) {
@@ -183,6 +195,8 @@ fn render_list_page(ui: &mut Ui, sources: &Vec<Source>) {
     if ui.button("Copy all").clicked() {
         set_all_clipboard(sources)
     }
+
+    ui.add_space(10.0);
 
     egui::ScrollArea::vertical()
         .auto_shrink(false)
