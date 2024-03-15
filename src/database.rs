@@ -1,4 +1,3 @@
-use crate::ui::Application;
 use crate::DATABASE_NAME;
 use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
@@ -11,16 +10,6 @@ pub struct Source {
     pub url: String,
     pub author: String,
     pub date: chrono::NaiveDate,
-}
-
-impl Application {
-    pub fn get_source(&self) -> Source {
-        Source {
-            url: self.input_url.clone(),
-            author: self.input_author.clone(),
-            date: self.input_date,
-        }
-    }
 }
 
 pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
@@ -74,6 +63,7 @@ pub async fn insert_source(
 
     Ok(())
 }
+
 
 pub async fn get_all_sources(conn: &mut SqliteConnection) -> Result<Vec<Source>, sqlx::Error> {
     sqlx::query_as::<_, Source>("SELECT * FROM sources")

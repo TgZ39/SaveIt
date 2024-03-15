@@ -1,4 +1,4 @@
-use crate::database::{establish_connection, insert_source, Source};
+use crate::database::{establish_connection, get_all_sources, insert_source, Source};
 use chrono::{Local, NaiveDate};
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
@@ -29,6 +29,7 @@ pub struct Application {
     pub input_author: String,
     pub input_date: NaiveDate,
     curr_page: AppPage,
+    sources_cache: Vec<Source>
 }
 
 impl Application {
@@ -40,10 +41,11 @@ impl Application {
             input_author: String::new(),
             input_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
+            sources_cache: vec![],
         }
     }
 
-    fn get_input_source(&self) -> Source {
+    fn get_source(&self) -> Source {
         Source {
             url: self.input_url.clone(),
             author: self.input_author.clone(),
@@ -98,11 +100,25 @@ impl eframe::App for Application {
                     AppPage::Start,
                     AppPage::Start.to_string(),
                 );
-                ui.selectable_value(
+                let page = ui.selectable_value(
                     &mut self.curr_page,
                     AppPage::List,
                     AppPage::List.to_string(),
                 );
+
+                if page.clicked() {
+
+                    executor::block_on(async {
+                        let mut conn = establish_connection()
+                            .await
+                            .expect("Error connecting to database.");
+        
+                        self.sources = get_all_sources(&mut conn)
+                            .await
+                            .expect("Error loading sources.");
+                    });
+                }
+
                 ui.selectable_value(
                     &mut self.curr_page,
                     AppPage::Settings,
@@ -113,7 +129,7 @@ impl eframe::App for Application {
             ui.separator();
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
-                AppPage::List => {}
+                AppPage::List => render_list_page(ui, &self.sources),
                 AppPage::Settings => {}
             }
         });
@@ -160,4 +176,15 @@ fn configure_fonts(ctx: &egui::Context) {
     .into();
 
     ctx.set_style(style);
+}
+
+fn render_list_page(ui: &mut Ui, sources: &Vec<Source>) {
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .drag_to_scroll(true)
+        .show(ui, |ui| {
+            for i in sources {
+                ui.label(format!("{:#?}",i));
+            }
+    });
 }

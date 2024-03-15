@@ -3,7 +3,7 @@
 mod database;
 mod ui;
 
-use crate::database::{establish_connection};
+use crate::database::establish_connection;
 use crate::ui::open_gui;
 
 use tracing::{info, Level};
