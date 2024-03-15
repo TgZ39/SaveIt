@@ -12,6 +12,17 @@ pub struct Source {
     pub date: chrono::NaiveDate,
 }
 
+impl Source {
+    pub fn format(&self) -> String {
+        format!(
+            "- Author: {}, URL: {} ({})",
+            self.author,
+            self.url,
+            self.date.format("%d. %m. %Y")
+        )
+    }
+}
+
 pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
     let db_path = ProjectDirs::from("com", "tgz39", "saveit")
         .unwrap()
@@ -63,7 +74,6 @@ pub async fn insert_source(
 
     Ok(())
 }
-
 
 pub async fn get_all_sources(conn: &mut SqliteConnection) -> Result<Vec<Source>, sqlx::Error> {
     sqlx::query_as::<_, Source>("SELECT * FROM sources")

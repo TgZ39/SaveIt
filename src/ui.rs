@@ -1,8 +1,10 @@
 use crate::database::{establish_connection, get_all_sources, insert_source, Source};
+use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
+use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{FontId, Ui};
+use egui::{FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 use futures::executor;
 use std::fmt::{Display, Formatter};
@@ -12,7 +14,9 @@ pub fn open_gui() -> Result<(), eframe::Error> {
     env_logger::init();
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([500.0, 350.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([500.0, 350.0])
+            .with_min_inner_size([500.0, 350.0]),
         ..Default::default()
     };
 
@@ -29,7 +33,7 @@ pub struct Application {
     pub input_author: String,
     pub input_date: NaiveDate,
     curr_page: AppPage,
-    sources_cache: Vec<Source>
+    sources_cache: Vec<Source>,
 }
 
 impl Application {
@@ -107,13 +111,12 @@ impl eframe::App for Application {
                 );
 
                 if page.clicked() {
-
                     executor::block_on(async {
                         let mut conn = establish_connection()
                             .await
                             .expect("Error connecting to database.");
-        
-                        self.sources = get_all_sources(&mut conn)
+
+                        self.sources_cache = get_all_sources(&mut conn)
                             .await
                             .expect("Error loading sources.");
                     });
@@ -129,7 +132,7 @@ impl eframe::App for Application {
             ui.separator();
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
-                AppPage::List => render_list_page(ui, &self.sources),
+                AppPage::List => render_list_page(ui, &self.sources_cache),
                 AppPage::Settings => {}
             }
         });
@@ -137,24 +140,22 @@ impl eframe::App for Application {
 }
 
 fn render_start_page(app: &mut Application, ui: &mut Ui) {
-    egui::Grid::new("SourceInput")
-        .num_columns(2)
-        .show(ui, |ui| {
-            let url_label = ui.label("URL: ");
-            ui.text_edit_singleline(&mut app.input_url)
-                .labelled_by(url_label.id);
-            ui.end_row();
+    Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
+        let url_label = ui.label("URL: ");
+        ui.text_edit_singleline(&mut app.input_url)
+            .labelled_by(url_label.id);
+        ui.end_row();
 
-            let author_label = ui.label("Author: ");
-            ui.text_edit_singleline(&mut app.input_author)
-                .labelled_by(author_label.id);
-            ui.end_row();
+        let author_label = ui.label("Author: ");
+        ui.text_edit_singleline(&mut app.input_author)
+            .labelled_by(author_label.id);
+        ui.end_row();
 
-            let date_label = ui.label("Date: ");
-            ui.add(DatePickerButton::new(&mut app.input_date))
-                .labelled_by(date_label.id);
-            ui.end_row();
-        });
+        let date_label = ui.label("Date: ");
+        ui.add(DatePickerButton::new(&mut app.input_date))
+            .labelled_by(date_label.id);
+        ui.end_row();
+    });
 
     let save_button = ui.button("Save");
 
@@ -179,12 +180,59 @@ fn configure_fonts(ctx: &egui::Context) {
 }
 
 fn render_list_page(ui: &mut Ui, sources: &Vec<Source>) {
+    if ui.button("Copy all").clicked() {
+        set_all_clipboard(sources)
+    }
+
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .drag_to_scroll(true)
         .show(ui, |ui| {
-            for i in sources {
-                ui.label(format!("{:#?}",i));
-            }
-    });
+            Grid::new("SourceList")
+                .striped(true)
+                .num_columns(2)
+                .show(ui, |ui| {
+                    for source in sources {
+                        let mut job = LayoutJob::single_section(
+                            source.url.to_string(),
+                            TextFormat::default(),
+                        );
+
+                        job.wrap = egui::text::TextWrapping {
+                            max_width: 100.0,
+                            max_rows: 1,
+                            break_anywhere: true,
+                            overflow_character: Some('…'),
+                        };
+
+                        if ui.button("Copy").clicked() {
+                            set_clipboard(source)
+                        }
+                        ui.label(job);
+
+                        ui.end_row()
+                    }
+                });
+        });
+}
+
+fn set_clipboard(source: &Source) {
+    let mut clipboard = Clipboard::new().unwrap();
+
+    let text = source.format();
+
+    clipboard.set_text(text).unwrap();
+}
+
+fn set_all_clipboard(sources: &Vec<Source>) {
+    let mut clipboard = Clipboard::new().unwrap();
+
+    let mut text = "".to_string();
+
+    for source in sources {
+        text.push_str(source.format().as_str());
+        text.push('\n');
+    }
+
+    clipboard.set_text(text).unwrap();
 }

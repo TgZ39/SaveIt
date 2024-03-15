@@ -6,6 +6,7 @@ version = 3
 name = "SaveIt"
 version = "0.1.0"
 dependencies = [
+ "arboard",
  "chrono",
  "directories",
  "eframe",
@@ -253,12 +254,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2041f1943049c7978768d84e6d0fd95de98b76d6c4727b09e78ec253d29fa58"
 dependencies = [
  "clipboard-win",
+ "core-graphics",
+ "image",
  "log",
  "objc",
  "objc-foundation",
  "objc_id",
  "parking_lot",
  "thiserror",
+ "windows-sys 0.48.0",
+ "wl-clipboard-rs",
  "x11rb",
 ]
 
@@ -668,6 +673,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ff69b9dd49fd426c69a0db9fc04dd934cdb6645ff000864d98f7e2af8830eaa"
 
 [[package]]
+name = "bytecount"
+version = "0.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1e5f035d16fc623ae5f74981db80a439803888314e3a555fd6f04acd51a3205"
+
+[[package]]
 name = "bytemuck"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1013,6 +1024,17 @@ name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "derive-new"
+version = "0.5.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3418329ca0ad70234b9735dc4ceed10af4df60eff9c8e7b06cb5e520d92c3535"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1446,6 +1468,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fcfdc7a0362c9f4444381a9e697c79d435fe65b52a37466fc2c1184cee9edc6"
 
 [[package]]
+name = "fixedbitset"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ce7134b9999ecaf8bcd65542e436736ef32ddca1b3e06094cb6ec5755203b80"
+
+[[package]]
 name = "flate2"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1465,6 +1493,12 @@ dependencies = [
  "futures-sink",
  "spin 0.9.8",
 ]
+
+[[package]]
+name = "fnv"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foreign-types"
@@ -1956,6 +1990,7 @@ dependencies = [
  "color_quant",
  "num-traits",
  "png",
+ "tiff",
 ]
 
 [[package]]
@@ -2033,6 +2068,12 @@ checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "jpeg-decoder"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5d4a7da358eff58addd2877a45865158f0d78c911d43a5784ceb7bbf52833b0"
 
 [[package]]
 name = "js-sys"
@@ -2339,6 +2380,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "memoffset 0.7.1",
+ "pin-utils",
 ]
 
 [[package]]
@@ -2573,6 +2615,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "os_pipe"
+version = "1.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57119c3b893986491ec9aa85056780d3a0f3cf4da7cc09dd3650dbd6c6738fb9"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2636,6 +2688,16 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
+
+[[package]]
+name = "petgraph"
+version = "0.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1d3afd2628e69da2be385eb6f2fd57c8ac7977ceeff6dc166ff1657b0e386a9"
+dependencies = [
+ "fixedbitset",
+ "indexmap",
+]
 
 [[package]]
 name = "pin-project-lite"
@@ -3532,6 +3594,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiff"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba1310fcea54c6a9a4fd1aad794ecc02c31682f6bfbecdf460bf19533eed1e3e"
+dependencies = [
+ "flate2",
+ "jpeg-decoder",
+ "weezl",
+]
+
+[[package]]
 name = "tiny-skia"
 version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3694,6 +3767,20 @@ dependencies = [
  "thread_local",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tree_magic_mini"
+version = "3.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91adfd0607cacf6e4babdb870e9bec4037c1c4b151cfd279ccefc5e0c7feaa6d"
+dependencies = [
+ "bytecount",
+ "fnv",
+ "lazy_static",
+ "nom",
+ "once_cell",
+ "petgraph",
 ]
 
 [[package]]
@@ -4062,6 +4149,12 @@ dependencies = [
  "url",
  "web-sys",
 ]
+
+[[package]]
+name = "weezl"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53a85b86a771b1c87058196170769dd264f66c0782acf1ae6cc51bfd64b39082"
 
 [[package]]
 name = "wgpu"
@@ -4518,6 +4611,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f593a95398737aeed53e489c785df13f3618e41dbcd6718c6addbf1395aa6876"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "wl-clipboard-rs"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57af79e973eadf08627115c73847392e6b766856ab8e3844a59245354b23d2fa"
+dependencies = [
+ "derive-new",
+ "libc",
+ "log",
+ "nix",
+ "os_pipe",
+ "tempfile",
+ "thiserror",
+ "tree_magic_mini",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
+ "wayland-protocols-wlr",
 ]
 
 [[package]]
