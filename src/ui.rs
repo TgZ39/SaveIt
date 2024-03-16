@@ -1,12 +1,16 @@
-use crate::database::{establish_connection, get_all_sources, insert_source, Source};
+use crate::database::{
+    delete_source, get_all_sources, insert_source, Source,
+};
 use arboard::Clipboard;
+use chrono::{Local, NaiveDate};
+use egui::scroll_area::ScrollBarVisibility;
+use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{FontId, Grid, Ui};
+use egui::{text, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 use futures::executor;
 use std::fmt::{Display, Formatter};
-use chrono::{Local, NaiveDate};
 
 pub fn open_gui() -> Result<(), eframe::Error> {
     // set up logging
@@ -32,7 +36,7 @@ pub struct Application {
     pub input_author: String,
     pub input_date: NaiveDate,
     curr_page: AppPage,
-    sources_cache: Vec<Source>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (~60/s)
+    sources_cache: Vec<Source>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
 }
 
 impl Application {
@@ -52,6 +56,7 @@ impl Application {
     // get input source from user
     fn get_source(&self) -> Source {
         Source {
+            id: -1,
             url: self.input_url.clone(),
             author: self.input_author.clone(),
             date: self.input_date,
@@ -64,10 +69,7 @@ impl Application {
         executor::block_on(async {
             let source = self.get_source();
 
-            let mut conn = establish_connection()
-                .await
-                .expect("Error connecting to database.");
-            insert_source(&mut conn, &source)
+            insert_source(&source)
                 .await
                 .expect("Error inserting source in database.");
         });
@@ -78,6 +80,12 @@ impl Application {
         self.input_url.clear();
         self.input_author.clear();
         self.input_date = NaiveDate::from(Local::now().naive_local());
+    }
+
+    fn update_source_cache(&mut self) {
+        executor::block_on(async {
+            self.sources_cache = get_all_sources().await.expect("Error loading sources.");
+        });
     }
 }
 
@@ -126,15 +134,7 @@ impl eframe::App for Application {
 
                 if list_page.clicked() {
                     // update source cache
-                    executor::block_on(async {
-                        let mut conn = establish_connection()
-                            .await
-                            .expect("Error connecting to database.");
-
-                        self.sources_cache = get_all_sources(&mut conn)
-                            .await
-                            .expect("Error loading sources.");
-                    });
+                    self.update_source_cache();
                 }
 
                 // Settings page
@@ -150,7 +150,7 @@ impl eframe::App for Application {
             // render selected page
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
-                AppPage::List => render_list_page(ui, &self.sources_cache),
+                AppPage::List => render_list_page(self, ui),
                 AppPage::Settings => {}
             }
         });
@@ -209,32 +209,64 @@ fn configure_fonts(ctx: &egui::Context) {
     ctx.set_style(style);
 }
 
-fn render_list_page(ui: &mut Ui, sources: &Vec<Source>) {
+fn render_list_page(app: &mut Application, ui: &mut Ui) {
     if ui.button("Copy all").clicked() {
-        set_all_clipboard(sources)
+        set_all_clipboard(&app.sources_cache)
     }
 
     ui.add_space(10.0);
 
+    render_sources(app, ui);
+}
+
+fn render_sources(app: &mut Application, ui: &mut Ui) {
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .drag_to_scroll(true)
+        .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
-            // fancy table
-            Grid::new("SourceList")
-                .striped(true)
-                .num_columns(2)
-                .show(ui, |ui| {
-                    for source in sources {
-                        // copy source to clipboard
-                        if ui.button("Copy").clicked() {
-                            set_clipboard(source)
-                        }
-                        // show URL
-                        ui.label(source.url.to_string());
-                        ui.end_row()
+            for source in app.sources_cache.to_vec(){ // app.sources_cache.iter().cloned() will NOT work (bug in clippy)
+                // source preview
+                ui.vertical(|ui| {
+                    let id = format!("Index: {}", &source.id);
+                    text_label_wrapped(&id, ui);
+
+                    let url = format!("URL: {}", &source.url);
+                    text_label_wrapped(&url, ui);
+
+                    let author = format!("Author: {}", &source.author);
+                    text_label_wrapped(&author, ui);
+
+                    let date = format!("Date: {}", &source.date.format("%d. %m. %Y"));
+                    text_label_wrapped(&date, ui);
+                });
+
+                ui.add_space(5.0);
+
+                // buttons
+                ui.horizontal(|ui| {
+                    let copy_button = ui.button("Copy");
+                    let edit_button = ui.button("Edit");
+                    let delete_button = ui.button("Delete");
+
+                    if copy_button.clicked() {
+                        set_clipboard(&source);
+                    }
+
+                    if edit_button.clicked() {
+                        todo!()
+                    }
+
+                    if delete_button.clicked() {
+                        handle_delete_source(source.id);
+                        app.update_source_cache();
                     }
                 });
+
+                ui.add_space(5.0);
+                ui.separator();
+                ui.add_space(5.0);
+            }
         });
 }
 
@@ -257,4 +289,22 @@ fn set_all_clipboard(sources: &Vec<Source>) {
     }
 
     clipboard.set_text(text).unwrap();
+}
+
+fn text_label_wrapped(text: &str, ui: &mut Ui) {
+    let mut job = LayoutJob::single_section(text.to_string(), TextFormat::default());
+
+    job.wrap = text::TextWrapping {
+        max_width: 0.0,
+        max_rows: 1,
+        break_anywhere: true,
+        overflow_character: Some('…'),
+    };
+    ui.label(job);
+}
+
+fn handle_delete_source(id: i64) {
+    executor::block_on(async {
+        delete_source(id).await.expect("Error deleting source");
+    })
 }
