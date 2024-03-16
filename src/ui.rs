@@ -5,7 +5,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, Context, FontId, Grid, TextFormat, Ui};
+use egui::{text, Context, FontId, Grid, TextFormat, Ui, CentralPanel};
 use egui_extras::DatePickerButton;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
@@ -234,8 +234,18 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
         .drag_to_scroll(true)
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
+
+            if app.sources_cache.clone().read().unwrap().is_empty() {
+                CentralPanel::default().show_inside(ui, |ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("Empty");
+                    });
+                });
+                return;
+            }
+
             for source in app.sources_cache.clone().read().unwrap().to_vec() {
-                // app.sources_cache.iter().cloned() will NOT work (bug in clippy)
+
                 // source preview
                 ui.vertical(|ui| {
                     let id = format!("Index: {}", &source.id);
