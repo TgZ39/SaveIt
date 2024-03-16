@@ -1,16 +1,28 @@
-use crate::database::{
-    delete_source, get_all_sources, insert_source, Source,
-};
+use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, FontId, Grid, TextFormat, Ui};
+use egui::{text, Context, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 use futures::executor;
 use std::fmt::{Display, Formatter};
+
+macro_rules! text_label_wrapped {
+    ($text:expr, $ui:expr) => {
+        let mut job = LayoutJob::single_section($text.to_string(), TextFormat::default());
+
+        job.wrap = text::TextWrapping {
+            max_width: 0.0,
+            max_rows: 1,
+            break_anywhere: true,
+            overflow_character: Some('…'),
+        };
+        $ui.label(job);
+    };
+}
 
 pub fn open_gui() -> Result<(), eframe::Error> {
     // set up logging
@@ -37,10 +49,12 @@ pub struct Application {
     pub input_date: NaiveDate,
     curr_page: AppPage,
     sources_cache: Vec<Source>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
+    edit_windows_open: bool, // using cell for more convenient editing of this value (btw fuck the borrow checker)
+    edit_source: Source,
 }
 
 impl Application {
-    fn new(ctx: &egui::Context) -> Self {
+    fn new(ctx: &Context) -> Self {
         // make font bigger
         configure_fonts(ctx);
 
@@ -50,6 +64,8 @@ impl Application {
             input_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
             sources_cache: vec![],
+            edit_windows_open: false,
+            edit_source: Source::default(),
         }
     }
 
@@ -114,7 +130,7 @@ impl Display for AppPage {
 
 impl eframe::App for Application {
     // runs every frame
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             // Page selection
             ui.horizontal(|ui| {
@@ -150,7 +166,7 @@ impl eframe::App for Application {
             // render selected page
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
-                AppPage::List => render_list_page(self, ui),
+                AppPage::List => render_list_page(self, ui, ctx),
                 AppPage::Settings => {}
             }
         });
@@ -159,9 +175,8 @@ impl eframe::App for Application {
 
 fn render_start_page(app: &mut Application, ui: &mut Ui) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
-        let url_label = ui.label("URL: ");
-
         // input URL
+        let url_label = ui.label("URL: ");
         ui.text_edit_singleline(&mut app.input_url)
             .labelled_by(url_label.id);
         ui.end_row();
@@ -194,7 +209,7 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
     });
 }
 
-fn configure_fonts(ctx: &egui::Context) {
+fn configure_fonts(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
 
     style.text_styles = [
@@ -209,36 +224,37 @@ fn configure_fonts(ctx: &egui::Context) {
     ctx.set_style(style);
 }
 
-fn render_list_page(app: &mut Application, ui: &mut Ui) {
+fn render_list_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     if ui.button("Copy all").clicked() {
         set_all_clipboard(&app.sources_cache)
     }
 
     ui.add_space(10.0);
 
-    render_sources(app, ui);
+    render_sources(app, ui, ctx);
 }
 
-fn render_sources(app: &mut Application, ui: &mut Ui) {
+fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .drag_to_scroll(true)
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
-            for source in app.sources_cache.to_vec(){ // app.sources_cache.iter().cloned() will NOT work (bug in clippy)
+            for source in app.sources_cache.to_vec() {
+                // app.sources_cache.iter().cloned() will NOT work (bug in clippy)
                 // source preview
                 ui.vertical(|ui| {
                     let id = format!("Index: {}", &source.id);
-                    text_label_wrapped(&id, ui);
+                    text_label_wrapped!(&id, ui);
 
                     let url = format!("URL: {}", &source.url);
-                    text_label_wrapped(&url, ui);
+                    text_label_wrapped!(&url, ui);
 
                     let author = format!("Author: {}", &source.author);
-                    text_label_wrapped(&author, ui);
+                    text_label_wrapped!(&author, ui);
 
                     let date = format!("Date: {}", &source.date.format("%d. %m. %Y"));
-                    text_label_wrapped(&date, ui);
+                    text_label_wrapped!(&date, ui);
                 });
 
                 ui.add_space(5.0);
@@ -249,16 +265,71 @@ fn render_sources(app: &mut Application, ui: &mut Ui) {
                     let edit_button = ui.button("Edit");
                     let delete_button = ui.button("Delete");
 
+                    // copy one source
                     if copy_button.clicked() {
                         set_clipboard(&source);
                     }
 
+                    // opens edit modal
                     if edit_button.clicked() {
-                        todo!()
+                        //
+                        app.edit_source = source.clone();
+                        app.edit_windows_open = true;
+                    }
+
+                    let mut update_cache = false;
+
+                    if app.edit_windows_open && app.edit_source.id == source.id {
+                        // app.edit_source.id == source.id needed because else it would open an edit model x number of sources in the db
+
+                        // needed because the borrow checker is fucking stupid
+                        let mut window_open = true;
+
+                        // edit modal
+                        egui::Window::new("Edit source")
+                            .collapsible(false)
+                            .open(&mut window_open)
+                            .show(ctx, |ui| {
+                                Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
+                                    // input URL
+                                    let url_label = ui.label("URL: ");
+                                    ui.text_edit_multiline(&mut app.edit_source.url)
+                                        .labelled_by(url_label.id);
+                                    ui.end_row();
+
+                                    // input author
+                                    let author_label = ui.label("Author: ");
+                                    ui.text_edit_singleline(&mut app.edit_source.author)
+                                        .labelled_by(author_label.id);
+                                    ui.end_row();
+
+                                    // input date
+                                    let date_label = ui.label("Date: ");
+                                    ui.add(DatePickerButton::new(&mut app.edit_source.date))
+                                        .labelled_by(date_label.id);
+                                    ui.end_row();
+                                });
+
+                                ui.add_space(10.0);
+
+                                if ui.button("Save").clicked() {
+                                    handle_update_source(app.edit_source.id, &app.edit_source);
+                                    update_cache = true;
+                                    app.edit_windows_open = false;
+                                }
+                            });
+
+                        if !window_open {
+                            app.edit_windows_open = false;
+                        }
                     }
 
                     if delete_button.clicked() {
                         handle_delete_source(source.id);
+                        update_cache = true;
+                    }
+
+                    if update_cache {
                         app.update_source_cache();
                     }
                 });
@@ -291,20 +362,16 @@ fn set_all_clipboard(sources: &Vec<Source>) {
     clipboard.set_text(text).unwrap();
 }
 
-fn text_label_wrapped(text: &str, ui: &mut Ui) {
-    let mut job = LayoutJob::single_section(text.to_string(), TextFormat::default());
-
-    job.wrap = text::TextWrapping {
-        max_width: 0.0,
-        max_rows: 1,
-        break_anywhere: true,
-        overflow_character: Some('…'),
-    };
-    ui.label(job);
-}
-
 fn handle_delete_source(id: i64) {
     executor::block_on(async {
         delete_source(id).await.expect("Error deleting source");
+    })
+}
+
+fn handle_update_source(id: i64, source: &Source) {
+    executor::block_on(async {
+        update_source(id, source)
+            .await
+            .expect("Error deleting source");
     })
 }
