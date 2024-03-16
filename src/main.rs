@@ -6,7 +6,7 @@ mod ui;
 use crate::database::establish_connection;
 use crate::ui::open_gui;
 
-use tracing::{info, Level};
+use tracing::*;
 
 const DATABASE_NAME: &str = "sources.db";
 
@@ -19,10 +19,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_max_level(Level::INFO)
         .finish();
 
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    subscriber::set_global_default(subscriber).unwrap();
 
     // setup database
-    info!("Executing database migrations...");
+    debug!("Executing database migrations...");
     let mut conn = establish_connection()
         .await
         .expect("Error connection to database.");
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Error executing database migrations.");
 
     // open GUI
-    info!("Opening GUI");
+    debug!("Opening GUI");
     open_gui().expect("Error opening GUI");
 
     Ok(())
