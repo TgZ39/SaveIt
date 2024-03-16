@@ -5,8 +5,9 @@ use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use std::fs::create_dir_all;
 use tracing::*;
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, Clone)]
 pub struct Source {
+    pub id: i64,
     pub url: String,
     pub author: String,
     pub date: chrono::NaiveDate,
@@ -15,7 +16,8 @@ pub struct Source {
 impl Source {
     pub fn format(&self) -> String {
         format!(
-            "- Author: {}, URL: {} ({})",
+            "- [{}]: Author: {}, URL: {} ({})",
+            self.id,
             self.author,
             self.url,
             self.date.format("%d. %m. %Y")
@@ -61,24 +63,41 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
     SqliteConnection::connect(&db_loc).await
 }
 
-pub async fn insert_source(
-    conn: &mut SqliteConnection,
-    source: &Source,
-) -> Result<(), sqlx::Error> {
+pub async fn insert_source(source: &Source) -> Result<(), sqlx::Error> {
+    let mut conn = establish_connection().await?;
+
     info!("Inserting source into database: {:#?}", &source);
 
     sqlx::query("INSERT INTO sources (url, author, date) VALUES ($1, $2, $3)")
         .bind(&source.url)
         .bind(&source.author)
         .bind(source.date)
-        .execute(conn)
+        .execute(&mut conn)
         .await?;
 
     Ok(())
 }
 
-pub async fn get_all_sources(conn: &mut SqliteConnection) -> Result<Vec<Source>, sqlx::Error> {
+pub async fn get_all_sources() -> Result<Vec<Source>, sqlx::Error> {
+    let mut conn = establish_connection().await?;
+
     sqlx::query_as::<_, Source>("SELECT * FROM sources")
-        .fetch_all(conn)
+        .fetch_all(&mut conn)
         .await
+}
+
+pub async fn delete_source(id: i64) -> Result<(), sqlx::Error> {
+    info!("Deleting source: {}", id);
+
+    let mut conn = establish_connection().await?;
+
+    let res = sqlx::query("DELETE FROM sources WHERE id = $1")
+        .bind(id)
+        .execute(&mut conn)
+        .await;
+
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
 }
