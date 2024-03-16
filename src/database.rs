@@ -1,4 +1,5 @@
 use crate::DATABASE_NAME;
+use chrono::Local;
 use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
@@ -25,6 +26,17 @@ impl Source {
     }
 }
 
+impl Default for Source {
+    fn default() -> Self {
+        Self {
+            id: -1,
+            author: String::new(),
+            url: String::new(),
+            date: chrono::NaiveDate::from(Local::now().naive_local()),
+        }
+    }
+}
+
 pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
     let db_path = ProjectDirs::from("com", "tgz39", "saveit")
         .unwrap()
@@ -33,7 +45,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB path if it doesn't exist
     if !&db_path.exists() {
-        info!("Creating database directories...");
+        debug!("Creating database directories...");
         create_dir_all(&db_path).expect("Error creating database directories.");
     }
 
@@ -46,11 +58,11 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB file if it doesn't exist
     if !Sqlite::database_exists(&db_loc).await.unwrap_or(false) {
-        info!("Creating database {}", &db_loc);
+        debug!("Creating database {}", &db_loc);
 
         match Sqlite::create_database(&db_loc).await {
             Ok(_) => {
-                info!("Successfully created database.")
+                debug!("Successfully created database.")
             }
             Err(e) => {
                 error!("Error creating database: {}", e)
@@ -66,7 +78,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 pub async fn insert_source(source: &Source) -> Result<(), sqlx::Error> {
     let mut conn = establish_connection().await?;
 
-    info!("Inserting source into database: {:#?}", &source);
+    debug!("Inserting source into database: {:#?}", &source);
 
     sqlx::query("INSERT INTO sources (url, author, date) VALUES ($1, $2, $3)")
         .bind(&source.url)
@@ -87,11 +99,30 @@ pub async fn get_all_sources() -> Result<Vec<Source>, sqlx::Error> {
 }
 
 pub async fn delete_source(id: i64) -> Result<(), sqlx::Error> {
-    info!("Deleting source: {}", id);
+    debug!("Deleting source: {}", id);
 
     let mut conn = establish_connection().await?;
 
     let res = sqlx::query("DELETE FROM sources WHERE id = $1")
+        .bind(id)
+        .execute(&mut conn)
+        .await;
+
+    match res {
+        Ok(_) => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+pub async fn update_source(id: i64, source: &Source) -> Result<(), sqlx::Error> {
+    debug!("Updating source: {} to {:#?}", id, &source);
+
+    let mut conn = establish_connection().await?;
+
+    let res = sqlx::query("UPDATE sources SET url = $1, author = $2, date = $3 WHERE id = $4")
+        .bind(&source.url)
+        .bind(&source.author)
+        .bind(source.date)
         .bind(id)
         .execute(&mut conn)
         .await;
