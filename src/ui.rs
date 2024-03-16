@@ -331,7 +331,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                 ui.add_space(5.0);
                 ui.separator();
                 ui.add_space(5.0);
-            };
+            }
         });
 }
 
@@ -391,4 +391,3 @@ fn handle_source_save(app: &Application) {
         *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
     });
 }
-
