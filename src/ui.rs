@@ -7,21 +7,17 @@ use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
 use egui::{text, Context, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
-use futures::executor;
 use std::fmt::{Display, Formatter};
+use std::sync::{Arc, RwLock};
 
-macro_rules! text_label_wrapped {
-    ($text:expr, $ui:expr) => {
-        let mut job = LayoutJob::single_section($text.to_string(), TextFormat::default());
-
-        job.wrap = text::TextWrapping {
-            max_width: 0.0,
-            max_rows: 1,
-            break_anywhere: true,
-            overflow_character: Some('…'),
-        };
-        $ui.label(job);
-    };
+pub struct Application {
+    pub input_url: String,
+    pub input_author: String,
+    pub input_date: NaiveDate,
+    curr_page: AppPage,
+    sources_cache: Arc<RwLock<Vec<Source>>>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
+    edit_windows_open: bool, // using cell for more convenient editing of this value (btw fuck the borrow checker)
+    edit_source: Source,
 }
 
 pub fn open_gui() -> Result<(), eframe::Error> {
@@ -43,14 +39,18 @@ pub fn open_gui() -> Result<(), eframe::Error> {
     )
 }
 
-pub struct Application {
-    pub input_url: String,
-    pub input_author: String,
-    pub input_date: NaiveDate,
-    curr_page: AppPage,
-    sources_cache: Vec<Source>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
-    edit_windows_open: bool, // using cell for more convenient editing of this value (btw fuck the borrow checker)
-    edit_source: Source,
+macro_rules! text_label_wrapped {
+    ($text:expr, $ui:expr) => {
+        let mut job = LayoutJob::single_section($text.to_string(), TextFormat::default());
+
+        job.wrap = text::TextWrapping {
+            max_width: 0.0,
+            max_rows: 1,
+            break_anywhere: true,
+            overflow_character: Some('…'),
+        };
+        $ui.label(job);
+    };
 }
 
 impl Application {
@@ -63,7 +63,7 @@ impl Application {
             input_author: String::new(),
             input_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
-            sources_cache: vec![],
+            sources_cache: Arc::new(RwLock::new(vec![])),
             edit_windows_open: false,
             edit_source: Source::default(),
         }
@@ -79,18 +79,6 @@ impl Application {
         }
     }
 
-    // save input source to DB
-    pub fn handle_source_save(&self) {
-        // run async fn in sync code ¯\_(ツ)_/¯
-        executor::block_on(async {
-            let source = self.get_source();
-
-            insert_source(&source)
-                .await
-                .expect("Error inserting source in database.");
-        });
-    }
-
     // clears text fields and reset date to now
     fn clear_input(&mut self) {
         self.input_url.clear();
@@ -98,9 +86,15 @@ impl Application {
         self.input_date = NaiveDate::from(Local::now().naive_local());
     }
 
-    fn update_source_cache(&mut self) {
-        executor::block_on(async {
-            self.sources_cache = get_all_sources().await.expect("Error loading sources.");
+    fn update_source_cache(&self) {
+        // executor::block_on(async {
+        //     self.sources_cache = get_all_sources().await.expect("Error loading sources.");
+        // });
+
+        let sources = self.sources_cache.clone();
+        tokio::task::spawn(async move {
+            *sources.write().unwrap() = get_all_sources().await.expect("Error loading sources");
+            //*sources.lock().unwrap() = get_all_sources().await.expect("Error loading sources");
         });
     }
 }
@@ -199,7 +193,7 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
     ui.horizontal(|ui| {
         // save input source to DB
         if ui.button("Save").clicked() {
-            app.handle_source_save();
+            handle_source_save(app);
         }
 
         // clear input
@@ -226,7 +220,7 @@ fn configure_fonts(ctx: &Context) {
 
 fn render_list_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     if ui.button("Copy all").clicked() {
-        set_all_clipboard(&app.sources_cache)
+        set_all_clipboard(&app.sources_cache.read().unwrap());
     }
 
     ui.add_space(10.0);
@@ -240,7 +234,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
         .drag_to_scroll(true)
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
-            for source in app.sources_cache.to_vec() {
+            for source in app.sources_cache.clone().read().unwrap().to_vec() {
                 // app.sources_cache.iter().cloned() will NOT work (bug in clippy)
                 // source preview
                 ui.vertical(|ui| {
@@ -313,7 +307,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                 ui.add_space(10.0);
 
                                 if ui.button("Save").clicked() {
-                                    handle_update_source(app.edit_source.id, &app.edit_source);
+                                    handle_update_source(app.edit_source.id, &app.edit_source, app);
                                     update_cache = true;
                                     app.edit_windows_open = false;
                                 }
@@ -325,7 +319,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                     }
 
                     if delete_button.clicked() {
-                        handle_delete_source(source.id);
+                        handle_delete_source(source.id, app);
                         update_cache = true;
                     }
 
@@ -337,7 +331,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                 ui.add_space(5.0);
                 ui.separator();
                 ui.add_space(5.0);
-            }
+            };
         });
 }
 
@@ -362,16 +356,39 @@ fn set_all_clipboard(sources: &Vec<Source>) {
     clipboard.set_text(text).unwrap();
 }
 
-fn handle_delete_source(id: i64) {
-    executor::block_on(async {
+fn handle_delete_source(id: i64, app: &Application) {
+    let source_cache = app.sources_cache.clone();
+
+    tokio::task::spawn(async move {
         delete_source(id).await.expect("Error deleting source");
-    })
+
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+    });
 }
 
-fn handle_update_source(id: i64, source: &Source) {
-    executor::block_on(async {
-        update_source(id, source)
+fn handle_update_source(id: i64, source: &Source, app: &Application) {
+    let source = source.clone();
+    let source_cache = app.sources_cache.clone();
+
+    tokio::task::spawn(async move {
+        update_source(id, &source)
             .await
             .expect("Error deleting source");
-    })
+
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+    });
 }
+
+fn handle_source_save(app: &Application) {
+    let source = app.get_source();
+    let source_cache = app.sources_cache.clone();
+
+    tokio::task::spawn(async move {
+        insert_source(&source)
+            .await
+            .expect("Error inserting source in database.");
+        // update source cache after insert_source is done
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+    });
+}
+
