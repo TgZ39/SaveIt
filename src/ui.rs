@@ -5,7 +5,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, Context, FontId, Grid, TextFormat, Ui, CentralPanel};
+use egui::{text, CentralPanel, Context, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
@@ -125,7 +125,7 @@ impl Display for AppPage {
 impl eframe::App for Application {
     // runs every frame
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+        CentralPanel::default().show(ctx, |ui| {
             // Page selection
             ui.horizontal(|ui| {
                 // Start page
@@ -234,7 +234,6 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
         .drag_to_scroll(true)
         .scroll_bar_visibility(ScrollBarVisibility::AlwaysVisible)
         .show(ui, |ui| {
-
             if app.sources_cache.clone().read().unwrap().is_empty() {
                 CentralPanel::default().show_inside(ui, |ui| {
                     ui.vertical_centered(|ui| {
@@ -245,7 +244,6 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
             }
 
             for source in app.sources_cache.clone().read().unwrap().to_vec() {
-
                 // source preview
                 ui.vertical(|ui| {
                     let id = format!("Index: {}", &source.id);
