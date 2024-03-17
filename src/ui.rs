@@ -3,14 +3,14 @@ use std::sync::{Arc, RwLock};
 
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
-use egui::{CentralPanel, Context, FontId, Grid, text, TextFormat, Ui};
-use egui::FontFamily::Proportional;
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
+use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
+use egui::{text, CentralPanel, Context, FontId, Grid, IconData, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 
-use crate::database::{delete_source, get_all_sources, insert_source, Source, update_source};
+use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
 
 pub struct Application {
     pub input_url: String,
@@ -28,10 +28,17 @@ pub fn open_gui() -> Result<(), eframe::Error> {
     // set up logging
     env_logger::init();
 
+    let icon = IconData {
+        rgba: include_bytes!("../assets/icon.png").to_vec(),
+        width: 70,
+        height: 70,
+    };
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([500.0, 350.0])
-            .with_min_inner_size([500.0, 350.0]),
+            .with_min_inner_size([500.0, 350.0])
+            .with_icon(icon),
         ..Default::default()
     };
 
@@ -68,7 +75,7 @@ impl Application {
             input_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
             sources_cache: Arc::new(RwLock::new(vec![])),
-            edit_windows_open: false, // edit modal
+            edit_windows_open: false,       // edit modal
             edit_source: Source::default(), // source to edit in the edit modal
         }
     }
@@ -212,7 +219,7 @@ fn configure_fonts(ctx: &Context) {
         (Button, FontId::default()),
         (Small, FontId::default()),
     ]
-        .into();
+    .into();
 
     ctx.set_style(style);
 }

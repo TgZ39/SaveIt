@@ -2,8 +2,8 @@ use std::fs::create_dir_all;
 
 use chrono::Local;
 use directories::ProjectDirs;
-use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use sqlx::migrate::MigrateDatabase;
+use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use tracing::*;
 
 use crate::DATABASE_NAME;
