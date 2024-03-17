@@ -7,7 +7,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, Context, FontId, Grid, IconData, TextFormat, Ui};
+use egui::{text, CentralPanel, Context, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
@@ -28,17 +28,19 @@ pub fn open_gui() -> Result<(), eframe::Error> {
     // set up logging
     env_logger::init();
 
-    let icon = IconData {
-        rgba: include_bytes!("../assets/icon.png").to_vec(),
-        width: 70,
-        height: 70,
-    };
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([500.0, 350.0])
+        .with_min_inner_size([500.0, 350.0]);
+
+    // load icon
+    let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png"));
+
+    if let Ok(icon_data) = icon {
+        viewport = viewport.with_icon(icon_data);
+    }
 
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([500.0, 350.0])
-            .with_min_inner_size([500.0, 350.0])
-            .with_icon(icon),
+        viewport,
         ..Default::default()
     };
 
