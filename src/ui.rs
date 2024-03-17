@@ -243,6 +243,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                 return;
             }
 
+            #[allow(clippy::unnecessary_to_owned)]
             for source in app.sources_cache.clone().read().unwrap().to_vec() {
                 // source preview
                 ui.vertical(|ui| {
