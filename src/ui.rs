@@ -64,8 +64,8 @@ impl Application {
             input_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
             sources_cache: Arc::new(RwLock::new(vec![])),
-            edit_windows_open: false,
-            edit_source: Source::default(),
+            edit_windows_open: false, // edit modal
+            edit_source: Source::default(), // source to edit in the edit modal
         }
     }
 
@@ -87,14 +87,10 @@ impl Application {
     }
 
     fn update_source_cache(&self) {
-        // executor::block_on(async {
-        //     self.sources_cache = get_all_sources().await.expect("Error loading sources.");
-        // });
 
         let sources = self.sources_cache.clone();
         tokio::task::spawn(async move {
             *sources.write().unwrap() = get_all_sources().await.expect("Error loading sources");
-            //*sources.lock().unwrap() = get_all_sources().await.expect("Error loading sources");
         });
     }
 }
@@ -365,16 +361,19 @@ fn set_all_clipboard(sources: &Vec<Source>) {
     clipboard.set_text(text).unwrap();
 }
 
+// async delete source
 fn handle_delete_source(id: i64, app: &Application) {
     let source_cache = app.sources_cache.clone();
 
     tokio::task::spawn(async move {
         delete_source(id).await.expect("Error deleting source");
 
-        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+        // update source cache
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources");
     });
 }
 
+// async update source
 fn handle_update_source(id: i64, source: &Source, app: &Application) {
     let source = source.clone();
     let source_cache = app.sources_cache.clone();
@@ -384,10 +383,12 @@ fn handle_update_source(id: i64, source: &Source, app: &Application) {
             .await
             .expect("Error deleting source");
 
-        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+        // update source cache
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources");
     });
 }
 
+// async save source
 fn handle_source_save(app: &Application) {
     let source = app.get_source();
     let source_cache = app.sources_cache.clone();
@@ -395,8 +396,9 @@ fn handle_source_save(app: &Application) {
     tokio::task::spawn(async move {
         insert_source(&source)
             .await
-            .expect("Error inserting source in database.");
-        // update source cache after insert_source is done
-        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources.");
+            .expect("Error inserting source in database");
+
+        // update source cache
+        *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources");
     });
 }
