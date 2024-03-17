@@ -1,22 +1,26 @@
-use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
-use arboard::Clipboard;
-use chrono::{Local, NaiveDate};
-use egui::scroll_area::ScrollBarVisibility;
-use egui::text::LayoutJob;
-use egui::FontFamily::Proportional;
-use egui::TextStyle::*;
-use egui::{text, CentralPanel, Context, FontId, Grid, TextFormat, Ui};
-use egui_extras::DatePickerButton;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
+
+use arboard::Clipboard;
+use chrono::{Local, NaiveDate};
+use egui::{CentralPanel, Context, FontId, Grid, text, TextFormat, Ui};
+use egui::FontFamily::Proportional;
+use egui::scroll_area::ScrollBarVisibility;
+use egui::text::LayoutJob;
+use egui::TextStyle::*;
+use egui_extras::DatePickerButton;
+
+use crate::database::{delete_source, get_all_sources, insert_source, Source, update_source};
 
 pub struct Application {
     pub input_url: String,
     pub input_author: String,
     pub input_date: NaiveDate,
     curr_page: AppPage,
-    sources_cache: Arc<RwLock<Vec<Source>>>, // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
-    edit_windows_open: bool, // using cell for more convenient editing of this value (btw fuck the borrow checker)
+    sources_cache: Arc<RwLock<Vec<Source>>>,
+    // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
+    edit_windows_open: bool,
+    // using cell for more convenient editing of this value (btw fuck the borrow checker)
     edit_source: Source,
 }
 
@@ -87,7 +91,6 @@ impl Application {
     }
 
     fn update_source_cache(&self) {
-
         let sources = self.sources_cache.clone();
         tokio::task::spawn(async move {
             *sources.write().unwrap() = get_all_sources().await.expect("Error loading sources");
@@ -209,7 +212,7 @@ fn configure_fonts(ctx: &Context) {
         (Button, FontId::default()),
         (Small, FontId::default()),
     ]
-    .into();
+        .into();
 
     ctx.set_style(style);
 }

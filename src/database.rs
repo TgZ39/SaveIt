@@ -1,10 +1,12 @@
-use crate::DATABASE_NAME;
+use std::fs::create_dir_all;
+
 use chrono::Local;
 use directories::ProjectDirs;
-use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
-use std::fs::create_dir_all;
+use sqlx::migrate::MigrateDatabase;
 use tracing::*;
+
+use crate::DATABASE_NAME;
 
 #[derive(Debug, FromRow, Clone)]
 pub struct Source {
