@@ -96,18 +96,14 @@ impl Application {
     // get input source from user
     fn get_source(&self) -> Source {
 
-        let published_date = match self.input_published_disabled {
-            true => { NaiveDate::MIN }
-            false => { self.input_published_date }
-        };
-
         Source {
             id: -1,
             title: self.input_title.clone(),
             url: self.input_url.clone(),
             author: self.input_author.clone(),
-            published_date,
+            published_date: self.input_published_date,
             viewed_date: self.input_viewed_date,
+            published_date_unknown: self.input_published_disabled
         }
     }
 
@@ -314,7 +310,11 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                     text_label_wrapped!(&author, ui);
 
                     let published_date = format!("Date published: {}", &source.published_date.format("%d. %m. %Y"));
-                    text_label_wrapped!(&published_date, ui);
+                    if source.published_date_unknown {
+                        text_label_wrapped!("Date published: Unknown", ui);
+                    } else {
+                        text_label_wrapped!(&published_date, ui);
+                    }
 
                     let viewed_date = format!("Date viewed: {}", &source.viewed_date.format("%d. %m. %Y"));
                     text_label_wrapped!(&viewed_date, ui);
@@ -372,19 +372,16 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                         .labelled_by(author_label.id);
                                     ui.end_row();
 
-                                    {
-                                        let enabled = match app.edit_source.published_date {
-                                            NaiveDate::MIN => false,
-                                            _ => true,
-                                        };
-
+                                    let published_date_label = ui.label("Date published: ");
+                                    ui.horizontal(|ui| {
                                         // input published date
-                                        let published_date_label = ui.label("Date published: ");
-                                        ui.add_enabled(enabled, DatePickerButton::new(&mut app.edit_source.published_date)
+                                        ui.add_enabled(!app.edit_source.published_date_unknown, DatePickerButton::new(&mut app.edit_source.published_date)
                                             .id_source("InputPublishedDate"))
                                             .labelled_by(published_date_label.id);
-                                        ui.end_row();
-                                    }
+
+                                        ui.checkbox(&mut app.edit_source.published_date_unknown, "Unknown");
+                                    });
+                                    ui.end_row();
 
                                     // input viewed date
                                     let viewed_date_label = ui.label("Date viewed: ");
@@ -496,17 +493,22 @@ fn render_settings_page(app: &mut Application, ui: &mut Ui) {
             ui.selectable_value(
                 &mut app.source_format,
                 FormatStandard::Default,
-                FormatStandard::Default.to_string(),
+                "Default",
             );
             ui.selectable_value(
                 &mut app.source_format,
                 FormatStandard::IEEE,
-                FormatStandard::IEEE.to_string(),
+                "IEEE",
             );
             ui.selectable_value(
                 &mut app.source_format,
                 FormatStandard::APA,
-                FormatStandard::APA.to_string(),
+                "APA",
+            );
+            ui.selectable_value(
+                &mut app.source_format,
+                FormatStandard::Custom,
+                "Custom",
             );
         });
 

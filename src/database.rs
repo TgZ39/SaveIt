@@ -5,7 +5,7 @@ use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use tracing::*;
-use crate::config::FormatStandard;
+use crate::config::{Config, FormatStandard};
 
 use crate::DATABASE_NAME;
 
@@ -15,12 +15,13 @@ pub struct Source {
     pub title: String,
     pub url: String,
     pub author: String,
-    pub published_date: chrono::NaiveDate,
-    pub viewed_date: chrono::NaiveDate,
+    pub published_date: NaiveDate,
+    pub viewed_date: NaiveDate,
+    pub published_date_unknown: bool,
 }
 
 impl Source {
-    pub fn format(&self, standard: &FormatStandard) -> String { // TODO update this
+    pub fn format(&self, standard: &FormatStandard) -> String {
         match standard {
             FormatStandard::Default => {
 
@@ -33,7 +34,7 @@ impl Source {
                     false => { out.push_str(format!(" {}", self.author ).as_str())}
                 }
 
-                if self.published_date != NaiveDate::MIN {
+                if !self.published_date_unknown {
                     out.push_str(format!(" ({})", self.published_date.format("%Y")).as_str());
                 }
 
@@ -43,6 +44,21 @@ impl Source {
             },
             FormatStandard::IEEE => { todo!() },
             FormatStandard::APA => { todo!() },
+            FormatStandard::Custom => {
+
+                let config = Config::get_config();
+
+                let mut out = config.custom_format_standard;
+
+                out = out.replace("{INDEX}", &self.id.to_string());
+                out = out.replace("{TITLE}", &self.title);
+                out = out.replace("{URL}", &self.url);
+                out = out.replace("{AUTHOR}", &self.author);
+                out = out.replace("{P_DATE}", &self.published_date.format("%Y").to_string());
+                out = out.replace("{V_DATE}", &self.viewed_date.format("%d. %m. %Y").to_string());
+
+                return out;
+            },
         }
     }
 }
@@ -56,6 +72,7 @@ impl Default for Source {
             url: String::new(),
             published_date: chrono::NaiveDate::from(Local::now().naive_local()), // current date
             viewed_date: chrono::NaiveDate::from(Local::now().naive_local()), // current date
+            published_date_unknown: false,
         }
     }
 }
@@ -103,12 +120,13 @@ pub async fn insert_source(source: &Source) -> Result<(), sqlx::Error> {
 
     debug!("Inserting source into database: {:#?}", &source);
 
-    sqlx::query("INSERT INTO sources (title, url, author, published_date, viewed_date) VALUES ($1, $2, $3, $4, $5)")
+    sqlx::query("INSERT INTO sources (title, url, author, published_date, viewed_date, published_date_unknown) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&source.title)
         .bind(&source.url)
         .bind(&source.author)
         .bind(source.published_date)
         .bind(source.viewed_date)
+        .bind(source.published_date_unknown)
         .execute(&mut conn)
         .await?;
 
@@ -144,12 +162,13 @@ pub async fn update_source(id: i64, source: &Source) -> Result<(), sqlx::Error> 
 
     let mut conn = establish_connection().await?;
 
-    let res = sqlx::query("UPDATE sources SET title = $1, url = $2, author = $3, published_date = $4, viewed_date = $5 WHERE id = $6")
+    let res = sqlx::query("UPDATE sources SET title = $1, url = $2, author = $3, published_date = $4, viewed_date = $5, published_date_unknown = $6 WHERE id = $7")
         .bind(&source.title)
         .bind(&source.url)
         .bind(&source.author)
         .bind(source.published_date)
         .bind(source.viewed_date)
+        .bind(source.published_date_unknown)
         .bind(id)
         .execute(&mut conn)
         .await;

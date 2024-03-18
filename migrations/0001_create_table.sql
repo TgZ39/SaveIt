@@ -4,5 +4,6 @@ CREATE TABLE if NOT EXISTS sources (
     url TEXT,
     author TEXT,
     published_date DATE,
-    viewed_date DATE
+    viewed_date DATE,
+    published_date_unknown BOOLEAN
 );
