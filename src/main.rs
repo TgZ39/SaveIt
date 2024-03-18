@@ -6,9 +6,9 @@ use tracing::*;
 use crate::database::establish_connection;
 use crate::ui::open_gui;
 
+mod config;
 mod database;
 mod ui;
-mod config;
 
 const DATABASE_NAME: &str = "sources.db";
 
