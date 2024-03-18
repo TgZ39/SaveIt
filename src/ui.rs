@@ -18,7 +18,7 @@ pub struct Application {
     pub input_url: String,
     pub input_author: String,
     pub input_published_date: NaiveDate,
-    input_published_enabled: bool,
+    input_published_disabled: bool,
     pub input_viewed_date: NaiveDate,
     curr_page: AppPage,
     sources_cache: Arc<RwLock<Vec<Source>>>,
@@ -83,7 +83,7 @@ impl Application {
             input_url: String::new(),
             input_author: String::new(),
             input_published_date: NaiveDate::from(Local::now().naive_local()), // Current date
-            input_published_enabled: false,
+            input_published_disabled: false,
             input_viewed_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
             sources_cache: Arc::new(RwLock::new(vec![])),
@@ -95,11 +95,19 @@ impl Application {
 
     // get input source from user
     fn get_source(&self) -> Source {
+
+        let published_date = match self.input_published_disabled {
+            true => { NaiveDate::MIN }
+            false => { self.input_published_date }
+        };
+
         Source {
             id: -1,
+            title: self.input_title.clone(),
             url: self.input_url.clone(),
             author: self.input_author.clone(),
-            date: self.input_published_date,
+            published_date,
+            viewed_date: self.input_viewed_date,
         }
     }
 
@@ -109,6 +117,7 @@ impl Application {
         self.input_author.clear();
         self.input_published_date = NaiveDate::from(Local::now().naive_local());
         self.input_viewed_date = NaiveDate::from(Local::now().naive_local());
+        self.input_published_disabled = false;
     }
 
     fn update_source_cache(&self) {
@@ -213,11 +222,11 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         // input published date
         let published_label = ui.label("Published on:");
         ui.horizontal(|ui| {
-            ui.add_enabled(!app.input_published_enabled, DatePickerButton::new(&mut app.input_published_date)
+            ui.add_enabled(!app.input_published_disabled, DatePickerButton::new(&mut app.input_published_date)
                 .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
                 .show_icon(false))
                 .labelled_by(published_label.id);
-            ui.checkbox(&mut app.input_published_enabled, "Unknown");
+            ui.checkbox(&mut app.input_published_disabled, "Unknown");
         });
 
         ui.end_row();
@@ -265,7 +274,7 @@ fn configure_fonts(ctx: &Context) {
 
 fn render_list_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     if ui.button("Copy all").clicked() {
-        set_all_clipboard(&app.sources_cache.read().unwrap());
+        set_all_clipboard(&app.sources_cache.read().unwrap(), app);
     }
 
     ui.add_space(10.0);
@@ -295,14 +304,20 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                     let id = format!("Index: {}", &source.id);
                     text_label_wrapped!(&id, ui);
 
+                    let title = format!("Title: {}", &source.title);
+                    text_label_wrapped!(&title, ui);
+
                     let url = format!("URL: {}", &source.url);
                     text_label_wrapped!(&url, ui);
 
                     let author = format!("Author: {}", &source.author);
                     text_label_wrapped!(&author, ui);
 
-                    let date = format!("Date: {}", &source.date.format("%d. %m. %Y"));
-                    text_label_wrapped!(&date, ui);
+                    let published_date = format!("Date published: {}", &source.published_date.format("%d. %m. %Y"));
+                    text_label_wrapped!(&published_date, ui);
+
+                    let viewed_date = format!("Date viewed: {}", &source.viewed_date.format("%d. %m. %Y"));
+                    text_label_wrapped!(&viewed_date, ui);
                 });
 
                 ui.add_space(5.0);
@@ -315,7 +330,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 
                     // copy one source
                     if copy_button.clicked() {
-                        set_clipboard(&source);
+                        set_clipboard(&source, app);
                     }
 
                     // opens edit modal
@@ -353,7 +368,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 
                                     // input date
                                     let date_label = ui.label("Date: ");
-                                    ui.add(DatePickerButton::new(&mut app.edit_source.date))
+                                    ui.add(DatePickerButton::new(&mut app.edit_source.published_date))
                                         .labelled_by(date_label.id);
                                     ui.end_row();
                                 });
@@ -389,21 +404,21 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
         });
 }
 
-fn set_clipboard(source: &Source) {
+fn set_clipboard(source: &Source, app: &Application) {
     let mut clipboard = Clipboard::new().unwrap();
 
-    let text = source.format();
+    let text = source.format(&app.source_format);
 
     clipboard.set_text(text).unwrap();
 }
 
-fn set_all_clipboard(sources: &Vec<Source>) {
+fn set_all_clipboard(sources: &Vec<Source>, app: &Application) {
     let mut clipboard = Clipboard::new().unwrap();
 
     let mut text = "".to_string();
 
     for source in sources {
-        text.push_str(source.format().as_str());
+        text.push_str(source.format(&app.source_format).as_str());
         text.push('\n');
     }
 

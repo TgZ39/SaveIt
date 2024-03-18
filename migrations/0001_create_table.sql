@@ -1,6 +1,8 @@
 CREATE TABLE if NOT EXISTS sources (
     id INTEGER PRIMARY KEY,
-    url TEXT NOT NULL,
+    title TEXT,
+    url TEXT,
     author TEXT,
-    date DATE
+    published_date DATE,
+    viewed_date DATE
 );
