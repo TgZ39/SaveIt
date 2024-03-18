@@ -1,11 +1,11 @@
 use std::fs::create_dir_all;
 
+use crate::config::{Config, FormatStandard};
 use chrono::{Local, NaiveDate};
 use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use tracing::*;
-use crate::config::{Config, FormatStandard};
 
 use crate::DATABASE_NAME;
 
@@ -24,41 +24,54 @@ impl Source {
     pub fn format(&self, standard: &FormatStandard) -> String {
         match standard {
             FormatStandard::Default => {
-
                 let mut out = String::new();
 
                 out.push_str(format!("[{}]", self.id).as_str());
 
-                match self.author.len() == 0 {
-                    true => { out.push_str(" Unbekannt") }
-                    false => { out.push_str(format!(" {}", self.author ).as_str())}
+                match self.author.is_empty() {
+                    true => out.push_str(" Unbekannt"),
+                    false => out.push_str(format!(" {}", self.author).as_str()),
                 }
 
                 if !self.published_date_unknown {
                     out.push_str(format!(" ({})", self.published_date.format("%Y")).as_str());
                 }
 
-                out.push_str(format!(": {} URL: {} [Stand: {}]", self.title, self.url, self.viewed_date.format("%d. %m. %Y")).as_str());
+                out.push_str(
+                    format!(
+                        ": {} URL: {} [Stand: {}]",
+                        self.title,
+                        self.url,
+                        self.viewed_date.format("%d. %m. %Y")
+                    )
+                    .as_str(),
+                );
 
-                return out;
-            },
-            FormatStandard::IEEE => { todo!() },
-            FormatStandard::APA => { todo!() },
+                out
+            }
+            FormatStandard::IEEE => {
+                todo!()
+            }
+            FormatStandard::APA => {
+                todo!()
+            }
             FormatStandard::Custom => {
-
                 let config = Config::get_config();
 
-                let mut out = config.custom_format_standard;
+                let mut out = config.custom_format;
 
                 out = out.replace("{INDEX}", &self.id.to_string());
                 out = out.replace("{TITLE}", &self.title);
                 out = out.replace("{URL}", &self.url);
                 out = out.replace("{AUTHOR}", &self.author);
                 out = out.replace("{P_DATE}", &self.published_date.format("%Y").to_string());
-                out = out.replace("{V_DATE}", &self.viewed_date.format("%d. %m. %Y").to_string());
+                out = out.replace(
+                    "{V_DATE}",
+                    &self.viewed_date.format("%d. %m. %Y").to_string(),
+                );
 
-                return out;
-            },
+                out
+            }
         }
     }
 }
@@ -71,7 +84,7 @@ impl Default for Source {
             author: String::new(),
             url: String::new(),
             published_date: chrono::NaiveDate::from(Local::now().naive_local()), // current date
-            viewed_date: chrono::NaiveDate::from(Local::now().naive_local()), // current date
+            viewed_date: chrono::NaiveDate::from(Local::now().naive_local()),    // current date
             published_date_unknown: false,
         }
     }

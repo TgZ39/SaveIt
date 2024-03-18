@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use confy::ConfyError;
+use serde::{Deserialize, Serialize};
 
 pub const CONFIG_NAME: &str = "save-it";
 
@@ -9,7 +8,7 @@ pub struct Config {
     pub ui_lang: String,
     pub source_lang: String,
     pub format_standard: FormatStandard,
-    pub custom_format_standard: String,
+    pub custom_format: String,
 }
 
 impl Default for Config {
@@ -18,7 +17,7 @@ impl Default for Config {
             ui_lang: "en".to_string(),
             source_lang: "en".to_string(),
             format_standard: FormatStandard::Default,
-            custom_format_standard: "CUSTOM FORMAT with url: {URL}, from {AUTHOR}".to_string(),
+            custom_format: "CUSTOM FORMAT".to_string(),
         }
     }
 }
@@ -27,7 +26,7 @@ impl Config {
     pub fn get_config() -> Self {
         let res: Result<Config, ConfyError> = confy::load(CONFIG_NAME, None);
 
-        return res.unwrap_or_else(|e| {
+        res.unwrap_or_else(|e| {
             if let ConfyError::BadTomlData(_) = e {
                 let default = Config::default();
 
@@ -44,6 +43,7 @@ impl Config {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum FormatStandard {
     Default,

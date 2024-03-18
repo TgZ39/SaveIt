@@ -8,7 +8,7 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextFormat, Ui, TextEdit};
+use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextEdit, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
@@ -26,7 +26,8 @@ pub struct Application {
     edit_windows_open: bool,
     // using cell for more convenient editing of this value (btw fuck the borrow checker)
     edit_source: Source,
-    source_format: FormatStandard,
+    input_format_standard: FormatStandard,
+    input_custom_format: String,
 }
 
 pub fn open_gui() -> Result<(), eframe::Error> {
@@ -89,13 +90,13 @@ impl Application {
             sources_cache: Arc::new(RwLock::new(vec![])),
             edit_windows_open: false,       // edit modal
             edit_source: Source::default(), // source to edit in the edit modal
-            source_format: config.format_standard,
+            input_format_standard: config.format_standard,
+            input_custom_format: config.custom_format,
         }
     }
 
     // get input source from user
     fn get_source(&self) -> Source {
-
         Source {
             id: -1,
             title: self.input_title.clone(),
@@ -103,7 +104,7 @@ impl Application {
             author: self.input_author.clone(),
             published_date: self.input_published_date,
             viewed_date: self.input_viewed_date,
-            published_date_unknown: self.input_published_disabled
+            published_date_unknown: self.input_published_disabled,
         }
     }
 
@@ -209,19 +210,21 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         // input author
         let author_label = ui.label("Author:");
 
-        let input_author = TextEdit::singleline(&mut app.input_author)
-            .hint_text("Leave empty if unknown");
-        ui.add(input_author)
-            .labelled_by(author_label.id);
+        let input_author =
+            TextEdit::singleline(&mut app.input_author).hint_text("Leave empty if unknown");
+        ui.add(input_author).labelled_by(author_label.id);
         ui.end_row();
 
         // input published date
         let published_label = ui.label("Date published:");
         ui.horizontal(|ui| {
-            ui.add_enabled(!app.input_published_disabled, DatePickerButton::new(&mut app.input_published_date)
-                .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
-                .show_icon(false))
-                .labelled_by(published_label.id);
+            ui.add_enabled(
+                !app.input_published_disabled,
+                DatePickerButton::new(&mut app.input_published_date)
+                    .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+                    .show_icon(false),
+            )
+            .labelled_by(published_label.id);
             ui.checkbox(&mut app.input_published_disabled, "Unknown");
         });
 
@@ -229,10 +232,12 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
 
         // input viewed date
         let viewed_label = ui.label("Date viewed:");
-        ui.add(DatePickerButton::new(&mut app.input_viewed_date)
-            .id_source("InputViewedDate") // needs to be set otherwise the UI would bug with multiple date pickers
-            .show_icon(false))
-            .labelled_by(viewed_label.id);
+        ui.add(
+            DatePickerButton::new(&mut app.input_viewed_date)
+                .id_source("InputViewedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+                .show_icon(false),
+        )
+        .labelled_by(viewed_label.id);
         ui.end_row();
     });
 
@@ -309,14 +314,18 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                     let author = format!("Author: {}", &source.author);
                     text_label_wrapped!(&author, ui);
 
-                    let published_date = format!("Date published: {}", &source.published_date.format("%d. %m. %Y"));
+                    let published_date = format!(
+                        "Date published: {}",
+                        &source.published_date.format("%d. %m. %Y")
+                    );
                     if source.published_date_unknown {
                         text_label_wrapped!("Date published: Unknown", ui);
                     } else {
                         text_label_wrapped!(&published_date, ui);
                     }
 
-                    let viewed_date = format!("Date viewed: {}", &source.viewed_date.format("%d. %m. %Y"));
+                    let viewed_date =
+                        format!("Date viewed: {}", &source.viewed_date.format("%d. %m. %Y"));
                     text_label_wrapped!(&viewed_date, ui);
                 });
 
@@ -375,19 +384,29 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                     let published_date_label = ui.label("Date published: ");
                                     ui.horizontal(|ui| {
                                         // input published date
-                                        ui.add_enabled(!app.edit_source.published_date_unknown, DatePickerButton::new(&mut app.edit_source.published_date)
-                                            .id_source("InputPublishedDate"))
-                                            .labelled_by(published_date_label.id);
+                                        ui.add_enabled(
+                                            !app.edit_source.published_date_unknown,
+                                            DatePickerButton::new(
+                                                &mut app.edit_source.published_date,
+                                            )
+                                            .id_source("InputPublishedDate"),
+                                        )
+                                        .labelled_by(published_date_label.id);
 
-                                        ui.checkbox(&mut app.edit_source.published_date_unknown, "Unknown");
+                                        ui.checkbox(
+                                            &mut app.edit_source.published_date_unknown,
+                                            "Unknown",
+                                        );
                                     });
                                     ui.end_row();
 
                                     // input viewed date
                                     let viewed_date_label = ui.label("Date viewed: ");
-                                    ui.add(DatePickerButton::new(&mut app.edit_source.viewed_date)
-                                        .id_source("InputViewedDate"))
-                                        .labelled_by(viewed_date_label.id);
+                                    ui.add(
+                                        DatePickerButton::new(&mut app.edit_source.viewed_date)
+                                            .id_source("InputViewedDate"),
+                                    )
+                                    .labelled_by(viewed_date_label.id);
                                     ui.end_row();
                                 });
 
@@ -425,7 +444,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 fn set_clipboard(source: &Source, app: &Application) {
     let mut clipboard = Clipboard::new().unwrap();
 
-    let text = source.format(&app.source_format);
+    let text = source.format(&app.input_format_standard);
 
     clipboard.set_text(text).unwrap();
 }
@@ -436,7 +455,7 @@ fn set_all_clipboard(sources: &Vec<Source>, app: &Application) {
     let mut text = "".to_string();
 
     for source in sources {
-        text.push_str(source.format(&app.source_format).as_str());
+        text.push_str(source.format(&app.input_format_standard).as_str());
         text.push('\n');
     }
 
@@ -488,37 +507,47 @@ fn handle_source_save(app: &Application) {
 fn render_settings_page(app: &mut Application, ui: &mut Ui) {
     // select source formatting standard
     ComboBox::from_label("Select source format")
-        .selected_text(format!("{:?}", app.source_format))
+        .selected_text(format!("{:?}", app.input_format_standard))
         .show_ui(ui, |ui| {
             ui.selectable_value(
-                &mut app.source_format,
+                &mut app.input_format_standard,
                 FormatStandard::Default,
                 "Default",
             );
+            ui.selectable_value(&mut app.input_format_standard, FormatStandard::IEEE, "IEEE");
+            ui.selectable_value(&mut app.input_format_standard, FormatStandard::APA, "APA");
             ui.selectable_value(
-                &mut app.source_format,
-                FormatStandard::IEEE,
-                "IEEE",
-            );
-            ui.selectable_value(
-                &mut app.source_format,
-                FormatStandard::APA,
-                "APA",
-            );
-            ui.selectable_value(
-                &mut app.source_format,
+                &mut app.input_format_standard,
                 FormatStandard::Custom,
                 "Custom",
             );
         });
 
+    ui.horizontal(|ui| {
+        let custom_label = ui.label("Custom format:");
+        let input_custom_format = TextEdit::singleline(&mut app.input_custom_format);
+
+        #[allow(clippy::match_like_matches_macro)] // clippy complaining again LOL
+        let custom_format_enabled = match app.input_format_standard {
+            FormatStandard::Custom => true,
+            _ => false,
+        };
+        ui.add_enabled(custom_format_enabled, input_custom_format)
+            .labelled_by(custom_label.id);
+    });
+
     ui.add_space(10.0);
+
     // Save button
     if ui.button("Save").clicked() {
         let mut config = Config::get_config();
 
         // Source formatting standard
-        config.format_standard = app.source_format.clone();
+        config.format_standard = app.input_format_standard.clone();
+
+        // Custom format
+        config.custom_format = app.input_custom_format.clone();
+
         config.save();
     }
 }
