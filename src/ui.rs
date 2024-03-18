@@ -220,7 +220,7 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         ui.end_row();
 
         // input published date
-        let published_label = ui.label("Published on:");
+        let published_label = ui.label("Date published:");
         ui.horizontal(|ui| {
             ui.add_enabled(!app.input_published_disabled, DatePickerButton::new(&mut app.input_published_date)
                 .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
@@ -232,7 +232,7 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         ui.end_row();
 
         // input viewed date
-        let viewed_label = ui.label("Viewed on:");
+        let viewed_label = ui.label("Date viewed:");
         ui.add(DatePickerButton::new(&mut app.input_viewed_date)
             .id_source("InputViewedDate") // needs to be set otherwise the UI would bug with multiple date pickers
             .show_icon(false))
@@ -354,6 +354,12 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                             .open(&mut window_open)
                             .show(ctx, |ui| {
                                 Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
+                                    // input title
+                                    let title_label = ui.label("Title: ");
+                                    ui.text_edit_singleline(&mut app.edit_source.title)
+                                        .labelled_by(title_label.id);
+                                    ui.end_row();
+
                                     // input URL
                                     let url_label = ui.label("URL: ");
                                     ui.text_edit_multiline(&mut app.edit_source.url)
@@ -366,10 +372,25 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                         .labelled_by(author_label.id);
                                     ui.end_row();
 
-                                    // input date
-                                    let date_label = ui.label("Date: ");
-                                    ui.add(DatePickerButton::new(&mut app.edit_source.published_date))
-                                        .labelled_by(date_label.id);
+                                    {
+                                        let enabled = match app.edit_source.published_date {
+                                            NaiveDate::MIN => false,
+                                            _ => true,
+                                        };
+
+                                        // input published date
+                                        let published_date_label = ui.label("Date published: ");
+                                        ui.add_enabled(enabled, DatePickerButton::new(&mut app.edit_source.published_date)
+                                            .id_source("InputPublishedDate"))
+                                            .labelled_by(published_date_label.id);
+                                        ui.end_row();
+                                    }
+
+                                    // input viewed date
+                                    let viewed_date_label = ui.label("Date viewed: ");
+                                    ui.add(DatePickerButton::new(&mut app.edit_source.viewed_date)
+                                        .id_source("InputViewedDate"))
+                                        .labelled_by(viewed_date_label.id);
                                     ui.end_row();
                                 });
 
