@@ -1,13 +1,14 @@
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
 
+use crate::config::{Config, FormatStandard};
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, Context, FontId, Grid, TextFormat, Ui};
+use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextFormat, Ui};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
@@ -22,6 +23,7 @@ pub struct Application {
     edit_windows_open: bool,
     // using cell for more convenient editing of this value (btw fuck the borrow checker)
     edit_source: Source,
+    source_format: FormatStandard,
 }
 
 pub fn open_gui() -> Result<(), eframe::Error> {
@@ -71,6 +73,8 @@ impl Application {
         // make font bigger
         configure_fonts(ctx);
 
+        let config = Config::get_config();
+
         Self {
             input_url: String::new(),
             input_author: String::new(),
@@ -79,6 +83,7 @@ impl Application {
             sources_cache: Arc::new(RwLock::new(vec![])),
             edit_windows_open: false,       // edit modal
             edit_source: Source::default(), // source to edit in the edit modal
+            source_format: config.format_standard,
         }
     }
 
@@ -169,7 +174,7 @@ impl eframe::App for Application {
             match self.curr_page {
                 AppPage::Start => render_start_page(self, ui),
                 AppPage::List => render_list_page(self, ui, ctx),
-                AppPage::Settings => {}
+                AppPage::Settings => render_settings_page(self, ui),
             }
         });
     }
@@ -196,7 +201,10 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
         ui.end_row();
     });
 
-    ui.add_space(10.0);
+    //ui.add_space(10.0);
+    ui.add_space(5.0);
+    ui.separator();
+    ui.add_space(5.0);
 
     ui.horizontal(|ui| {
         // save input source to DB
@@ -413,4 +421,37 @@ fn handle_source_save(app: &Application) {
         // update source cache
         *source_cache.write().unwrap() = get_all_sources().await.expect("Error loading sources");
     });
+}
+
+fn render_settings_page(app: &mut Application, ui: &mut Ui) {
+    // select source formatting standard
+    ComboBox::from_label("Select source format")
+        .selected_text(format!("{:?}", app.source_format))
+        .show_ui(ui, |ui| {
+            ui.selectable_value(
+                &mut app.source_format,
+                FormatStandard::Default,
+                FormatStandard::Default.to_string(),
+            );
+            ui.selectable_value(
+                &mut app.source_format,
+                FormatStandard::IEEE,
+                FormatStandard::IEEE.to_string(),
+            );
+            ui.selectable_value(
+                &mut app.source_format,
+                FormatStandard::APA,
+                FormatStandard::APA.to_string(),
+            );
+        });
+
+    ui.add_space(10.0);
+    // Save button
+    if ui.button("Save").clicked() {
+        let mut config = Config::get_config();
+
+        // Source formatting standard
+        config.format_standard = app.source_format.clone();
+        config.save();
+    }
 }
