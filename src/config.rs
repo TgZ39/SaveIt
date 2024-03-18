@@ -1,13 +1,15 @@
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use confy::ConfyError;
 
-const CONFIG_NAME: &str = "save-it";
+pub const CONFIG_NAME: &str = "save-it";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
     pub ui_lang: String,
     pub source_lang: String,
     pub format_standard: FormatStandard,
+    pub custom_format_standard: String,
 }
 
 impl Default for Config {
@@ -16,13 +18,25 @@ impl Default for Config {
             ui_lang: "en".to_string(),
             source_lang: "en".to_string(),
             format_standard: FormatStandard::Default,
+            custom_format_standard: "CUSTOM FORMAT with url: {URL}, from {AUTHOR}".to_string(),
         }
     }
 }
 
 impl Config {
     pub fn get_config() -> Self {
-        confy::load(CONFIG_NAME, None).expect("Error loading config")
+        let res: Result<Config, ConfyError> = confy::load(CONFIG_NAME, None);
+
+        return res.unwrap_or_else(|e| {
+            if let ConfyError::BadTomlData(_) = e {
+                let default = Config::default();
+
+                confy::store(CONFIG_NAME, None, default).expect("Error resetting config");
+                Self::get_config()
+            } else {
+                panic!("Error loading config: {}", &e)
+            }
+        })
     }
 
     pub fn save(&self) {
@@ -35,14 +49,5 @@ pub enum FormatStandard {
     Default,
     IEEE,
     APA,
-}
-
-impl Display for FormatStandard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FormatStandard::Default => write!(f, "Default"),
-            FormatStandard::IEEE => write!(f, "IEEE"),
-            FormatStandard::APA => write!(f, "APA"),
-        }
-    }
+    Custom,
 }
