@@ -8,15 +8,18 @@ use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextFormat, Ui};
+use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextFormat, Ui, TextEdit};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
 
 pub struct Application {
+    pub input_title: String,
     pub input_url: String,
     pub input_author: String,
-    pub input_date: NaiveDate,
+    pub input_published_date: NaiveDate,
+    input_published_enabled: bool,
+    pub input_viewed_date: NaiveDate,
     curr_page: AppPage,
     sources_cache: Arc<RwLock<Vec<Source>>>,
     // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
@@ -76,9 +79,12 @@ impl Application {
         let config = Config::get_config();
 
         Self {
+            input_title: String::new(),
             input_url: String::new(),
             input_author: String::new(),
-            input_date: NaiveDate::from(Local::now().naive_local()), // Current date
+            input_published_date: NaiveDate::from(Local::now().naive_local()), // Current date
+            input_published_enabled: false,
+            input_viewed_date: NaiveDate::from(Local::now().naive_local()), // Current date
             curr_page: AppPage::Start,
             sources_cache: Arc::new(RwLock::new(vec![])),
             edit_windows_open: false,       // edit modal
@@ -93,7 +99,7 @@ impl Application {
             id: -1,
             url: self.input_url.clone(),
             author: self.input_author.clone(),
-            date: self.input_date,
+            date: self.input_published_date,
         }
     }
 
@@ -101,7 +107,8 @@ impl Application {
     fn clear_input(&mut self) {
         self.input_url.clear();
         self.input_author.clear();
-        self.input_date = NaiveDate::from(Local::now().naive_local());
+        self.input_published_date = NaiveDate::from(Local::now().naive_local());
+        self.input_viewed_date = NaiveDate::from(Local::now().naive_local());
     }
 
     fn update_source_cache(&self) {
@@ -182,26 +189,48 @@ impl eframe::App for Application {
 
 fn render_start_page(app: &mut Application, ui: &mut Ui) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
+        // input title
+        let title_label = ui.label("Title:");
+        ui.text_edit_singleline(&mut app.input_title)
+            .labelled_by(title_label.id);
+        ui.end_row();
+
         // input URL
-        let url_label = ui.label("URL: ");
+        let url_label = ui.label("URL:");
         ui.text_edit_singleline(&mut app.input_url)
             .labelled_by(url_label.id);
         ui.end_row();
 
         // input author
-        let author_label = ui.label("Author: ");
-        ui.text_edit_singleline(&mut app.input_author)
+        let author_label = ui.label("Author:");
+
+        let input_author = TextEdit::singleline(&mut app.input_author)
+            .hint_text("Leave empty if unknown");
+        ui.add(input_author)
             .labelled_by(author_label.id);
         ui.end_row();
 
-        // input date
-        let date_label = ui.label("Date: ");
-        ui.add(DatePickerButton::new(&mut app.input_date))
-            .labelled_by(date_label.id);
+        // input published date
+        let published_label = ui.label("Published on:");
+        ui.horizontal(|ui| {
+            ui.add_enabled(!app.input_published_enabled, DatePickerButton::new(&mut app.input_published_date)
+                .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+                .show_icon(false))
+                .labelled_by(published_label.id);
+            ui.checkbox(&mut app.input_published_enabled, "Unknown");
+        });
+
+        ui.end_row();
+
+        // input viewed date
+        let viewed_label = ui.label("Viewed on:");
+        ui.add(DatePickerButton::new(&mut app.input_viewed_date)
+            .id_source("InputViewedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+            .show_icon(false))
+            .labelled_by(viewed_label.id);
         ui.end_row();
     });
 
-    //ui.add_space(10.0);
     ui.add_space(5.0);
     ui.separator();
     ui.add_space(5.0);
