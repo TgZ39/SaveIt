@@ -33,7 +33,7 @@ impl Source {
                     false => { out.push_str(format!(" {}", self.author ).as_str())}
                 }
 
-                if self.published_date == NaiveDate::MIN {
+                if self.published_date != NaiveDate::MIN {
                     out.push_str(format!(" ({})", self.published_date.format("%Y")).as_str());
                 }
 
