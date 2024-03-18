@@ -17,3 +17,5 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tokio = { version = "1.36.0", features = ["rt", "rt-multi-thread", "macros"] }
 arboard = { version = "3.3.2", features = ["wayland-data-control", "wl-clipboard-rs", "windows-sys", "default"] }
+serde = { version = "1.0.197", features = ["derive"] }
+confy = "0.6.1"

@@ -8,6 +8,7 @@ use crate::ui::open_gui;
 
 mod database;
 mod ui;
+mod config;
 
 const DATABASE_NAME: &str = "sources.db";
 
