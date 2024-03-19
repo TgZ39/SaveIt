@@ -32,7 +32,9 @@ pub fn render(app: &mut Application, ui: &mut Ui) {
             .labelled_by(custom_label.id);
     });
 
-    ui.add_space(10.0);
+    ui.add_space(5.0);
+    ui.separator();
+    ui.add_space(5.0);
 
     // Save button
     if ui.button("Save").clicked() {

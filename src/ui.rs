@@ -28,7 +28,7 @@ pub struct Application {
     pub input_viewed_date: NaiveDate,
     pub input_comment: String,
     curr_page: AppPage,
-    pub(crate) sources_cache: Arc<RwLock<Vec<Source>>>,
+    pub sources_cache: Arc<RwLock<Vec<Source>>>,
     // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
     edit_windows_open: bool,
     // using cell for more convenient editing of this value (btw fuck the borrow checker)
