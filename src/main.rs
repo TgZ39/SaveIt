@@ -1,6 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(non_snake_case)]
-
 use tracing::*;
 
 use crate::database::establish_connection;
@@ -9,8 +8,6 @@ use crate::ui::open_gui;
 mod config;
 mod database;
 mod ui;
-
-const DATABASE_NAME: &str = "sources.db";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

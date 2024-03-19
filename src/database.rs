@@ -7,7 +7,12 @@ use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
 use tracing::*;
 
-use crate::DATABASE_NAME;
+#[macro_export]
+macro_rules! db_version {
+    () => {
+        format!("sources-{}.db", &env!("CARGO_PKG_VERSION")[0..3])
+    };
+}
 
 #[derive(Debug, FromRow, Clone)]
 pub struct Source {
@@ -108,7 +113,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
     let db_loc = format!(
         "sqlite://{}/{}",
         &db_path.to_str().unwrap().to_owned(),
-        DATABASE_NAME
+        db_version!()
     );
 
     // create DB file if it doesn't exist
