@@ -1,6 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(non_snake_case)]
 
+use crate::args::Args;
+use crate::config::CONFIG_NAME;
+use clap::Parser;
+use directories::ProjectDirs;
+use std::fs;
 use tracing::*;
 
 use crate::database::establish_connection;
@@ -10,6 +15,7 @@ mod config;
 mod database;
 mod ui;
 
+mod args;
 mod source;
 
 #[tokio::main]
@@ -22,6 +28,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish();
 
     subscriber::set_global_default(subscriber).unwrap();
+
+    // Parse CLI arguments
+    let args = Args::parse();
+
+    if args.reset_database || args.reset_config {
+        if args.reset_database {
+            debug!("Deleting DB file");
+
+            let db_path = ProjectDirs::from("com", "tgz39", "saveit")
+                .unwrap()
+                .data_dir()
+                .to_owned();
+            let db_loc = format!(
+                "{}/{}",
+                &db_path.to_str().unwrap().to_owned(),
+                db_version!()
+            );
+
+            fs::remove_file(db_loc).expect("Error deleting DB file");
+        }
+        if args.reset_config {
+            debug!("Deleting config file");
+
+            let loc = confy::get_configuration_file_path(CONFIG_NAME, None)
+                .expect("Error loading config");
+
+            fs::remove_file(loc).expect("Error deleting config file");
+        }
+        return Ok(());
+    }
 
     // setup database
     debug!("Executing database migrations...");
