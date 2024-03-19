@@ -1,6 +1,8 @@
+use egui::{ComboBox, TextEdit, Ui};
+use tracing::*;
+
 use crate::config::{Config, FormatStandard};
 use crate::ui::Application;
-use egui::{ComboBox, TextEdit, Ui};
 
 pub fn render(app: &mut Application, ui: &mut Ui) {
     // select source formatting standard
@@ -38,6 +40,7 @@ pub fn render(app: &mut Application, ui: &mut Ui) {
 
     // Save button
     if ui.button("Save").clicked() {
+        trace!("Save clicked");
         let mut config = Config::get_config();
 
         // Source formatting standard

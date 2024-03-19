@@ -2,12 +2,13 @@ use std::default::Default;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
 
-use crate::config::{Config, FormatStandard};
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
 use egui::TextStyle::*;
 use egui::{CentralPanel, Context, FontFamily, FontId};
+use tracing::*;
 
+use crate::config::{Config, FormatStandard};
 use crate::database::get_all_sources;
 use crate::source::Source;
 
@@ -39,6 +40,7 @@ pub struct Application {
 
 impl Application {
     fn new(ctx: &Context) -> Self {
+        debug!("Creating new Application");
         // make font bigger
         configure_fonts(ctx);
 
@@ -63,6 +65,8 @@ impl Application {
 
     // get input source from user
     pub(crate) fn get_source(&self) -> Source {
+        trace!("Reading user source input");
+
         Source {
             id: -1,
             title: self.input_title.clone(),
@@ -77,6 +81,8 @@ impl Application {
 
     // clears text fields and reset date to now
     fn clear_input(&mut self) {
+        trace!("Clearing user source input");
+
         self.input_title.clear();
         self.input_url.clear();
         self.input_author.clear();
@@ -87,6 +93,8 @@ impl Application {
     }
 
     fn update_source_cache(&self) {
+        trace!("Updating source cache");
+
         let sources = self.sources_cache.clone();
         tokio::task::spawn(async move {
             *sources.write().unwrap() = get_all_sources().await.expect("Error loading sources");
@@ -114,6 +122,7 @@ pub fn open_gui() -> Result<(), eframe::Error> {
         ..Default::default()
     };
 
+    debug!("Opening GUI");
     // open GUI
     eframe::run_native(
         format!("SaveIt v{}", env!("CARGO_PKG_VERSION")).as_str(),
@@ -123,6 +132,8 @@ pub fn open_gui() -> Result<(), eframe::Error> {
 }
 
 fn configure_fonts(ctx: &Context) {
+    trace!("Configuring fonts");
+
     let mut style = (*ctx.style()).clone();
 
     style.text_styles = [
@@ -221,6 +232,8 @@ impl eframe::App for Application {
 }
 
 pub fn set_clipboard(source: &Source, app: &Application) {
+    info!("Setting clipboard: {:?}", source);
+
     let mut clipboard = Clipboard::new().unwrap();
 
     let text = source.format(&app.input_format_standard);
@@ -229,6 +242,8 @@ pub fn set_clipboard(source: &Source, app: &Application) {
 }
 
 pub fn set_all_clipboard(sources: &Vec<Source>, app: &Application) {
+    info!("Setting clipboard with all sources");
+
     let mut clipboard = Clipboard::new().unwrap();
 
     let mut text = "".to_string();

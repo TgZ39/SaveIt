@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(non_snake_case)]
+
 use tracing::*;
 
 use crate::database::establish_connection;
@@ -35,7 +36,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Error executing database migrations");
 
     // open GUI
-    debug!("Opening GUI");
     open_gui().expect("Error opening GUI");
 
     Ok(())

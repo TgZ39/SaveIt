@@ -1,12 +1,12 @@
 use std::fs::create_dir_all;
 
-use crate::source::Source;
-use crate::ui::Application;
-
 use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::{Connection, Sqlite, SqliteConnection};
 use tracing::*;
+
+use crate::source::Source;
+use crate::ui::Application;
 
 #[macro_export]
 macro_rules! db_version {
@@ -23,7 +23,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB path if it doesn't exist
     if !&db_path.exists() {
-        debug!("Creating database directories...");
+        info!("Creating database directories...");
         create_dir_all(&db_path).expect("Error creating database directories");
     }
 
@@ -36,7 +36,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB file if it doesn't exist
     if !Sqlite::database_exists(&db_loc).await.unwrap_or(false) {
-        debug!("Creating database {}", &db_loc);
+        info!("Creating database {}", &db_loc);
 
         match Sqlite::create_database(&db_loc).await {
             Ok(_) => {
@@ -73,6 +73,8 @@ pub async fn insert_source(source: &Source) -> Result<(), sqlx::Error> {
 }
 
 pub async fn get_all_sources() -> Result<Vec<Source>, sqlx::Error> {
+    debug!("Fetching all sources");
+
     let mut conn = establish_connection().await?;
 
     sqlx::query_as::<_, Source>("SELECT * FROM sources")

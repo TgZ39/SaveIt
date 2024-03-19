@@ -1,7 +1,9 @@
-use crate::database::handle_source_save;
-use crate::ui::{Application, TEXT_INPUT_WIDTH};
 use egui::{Grid, TextEdit, Ui};
 use egui_extras::DatePickerButton;
+use tracing::*;
+
+use crate::database::handle_source_save;
+use crate::ui::{Application, TEXT_INPUT_WIDTH};
 
 pub fn render(app: &mut Application, ui: &mut Ui) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
@@ -65,11 +67,13 @@ pub fn render(app: &mut Application, ui: &mut Ui) {
     ui.horizontal(|ui| {
         // save input source to DB
         if ui.button("Save").clicked() {
+            trace!("Save clicked");
             handle_source_save(app);
         }
 
         // clear input
         if ui.button("Clear").clicked() {
+            trace!("Clear clicked");
             app.clear_input();
         }
     });

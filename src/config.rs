@@ -1,5 +1,6 @@
 use confy::ConfyError;
 use serde::{Deserialize, Serialize};
+use tracing::*;
 
 pub const CONFIG_NAME: &str = "save-it";
 
@@ -13,6 +14,8 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
+        trace!("Creating new config");
+
         Self {
             ui_lang: "en".to_string(),
             source_lang: "en".to_string(),
@@ -24,6 +27,8 @@ impl Default for Config {
 
 impl Config {
     pub fn get_config() -> Self {
+        debug!("Getting config");
+
         let res: Result<Config, ConfyError> = confy::load(CONFIG_NAME, None);
 
         res.unwrap_or_else(|e| {
@@ -39,6 +44,8 @@ impl Config {
     }
 
     pub fn save(&self) {
+        debug!("Saving config");
+
         confy::store(CONFIG_NAME, None, self).expect("Error saving config");
     }
 }

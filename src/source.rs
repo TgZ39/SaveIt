@@ -1,6 +1,8 @@
-use crate::config::{Config, FormatStandard};
 use chrono::{Local, NaiveDate};
 use sqlx::FromRow;
+use tracing::*;
+
+use crate::config::{Config, FormatStandard};
 
 #[derive(Debug, FromRow, Clone)]
 pub struct Source {
@@ -16,6 +18,8 @@ pub struct Source {
 
 impl Source {
     pub fn format(&self, standard: &FormatStandard) -> String {
+        trace!("Formatting source with: {:?}", standard);
+
         match standard {
             FormatStandard::Default => {
                 let mut out = String::new();
@@ -66,6 +70,8 @@ impl Source {
 
 impl Default for Source {
     fn default() -> Self {
+        trace!("Creating new Source");
+
         Self {
             id: -1,
             title: String::new(),

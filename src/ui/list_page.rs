@@ -1,11 +1,13 @@
-use crate::database::{handle_delete_source, handle_update_source};
-use crate::ui::{set_all_clipboard, set_clipboard, Application, TEXT_INPUT_WIDTH};
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text;
 use egui::text::LayoutJob;
 use egui::TextFormat;
 use egui::{CentralPanel, Context, Grid, TextEdit, Ui};
 use egui_extras::DatePickerButton;
+use tracing::*;
+
+use crate::database::{handle_delete_source, handle_update_source};
+use crate::ui::{set_all_clipboard, set_clipboard, Application, TEXT_INPUT_WIDTH};
 
 pub fn render(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     if ui.button("Copy all").clicked() {
@@ -73,12 +75,13 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 
                     // copy one source
                     if copy_button.clicked() {
+                        trace!("Copy clicked");
                         set_clipboard(&source, app);
                     }
 
                     // opens edit modal
                     if edit_button.clicked() {
-                        //
+                        trace!("Edit button clicked");
                         app.edit_source = source.clone();
                         app.edit_windows_open = true;
                     }
@@ -164,6 +167,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                 ui.add_space(10.0);
 
                                 if ui.button("Save").clicked() {
+                                    trace!("Edit modal save clicked");
                                     handle_update_source(app.edit_source.id, &app.edit_source, app);
                                     update_cache = true;
                                     app.edit_windows_open = false;
@@ -176,6 +180,7 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                     }
 
                     if delete_button.clicked() {
+                        trace!("Delete clicked");
                         handle_delete_source(source.id, app);
                         update_cache = true;
                     }
