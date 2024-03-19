@@ -23,7 +23,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB path if it doesn't exist
     if !&db_path.exists() {
-        info!("Creating database directories...");
+        debug!("Creating database directories...");
         create_dir_all(&db_path).expect("Error creating database directories");
     }
 
@@ -36,7 +36,7 @@ pub async fn establish_connection() -> Result<SqliteConnection, sqlx::Error> {
 
     // create DB file if it doesn't exist
     if !Sqlite::database_exists(&db_loc).await.unwrap_or(false) {
-        info!("Creating database {}", &db_loc);
+        debug!("Database doesn't exists. Creating database {}", &db_loc);
 
         match Sqlite::create_database(&db_loc).await {
             Ok(_) => {

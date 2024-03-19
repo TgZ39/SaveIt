@@ -232,7 +232,7 @@ impl eframe::App for Application {
 }
 
 pub fn set_clipboard(source: &Source, app: &Application) {
-    info!("Setting clipboard: {:?}", source);
+    debug!("Setting clipboard: {:?}", source);
 
     let mut clipboard = Clipboard::new().unwrap();
 
@@ -242,7 +242,7 @@ pub fn set_clipboard(source: &Source, app: &Application) {
 }
 
 pub fn set_all_clipboard(sources: &Vec<Source>, app: &Application) {
-    info!("Setting clipboard with all sources");
+    debug!("Setting clipboard with all sources");
 
     let mut clipboard = Clipboard::new().unwrap();
 

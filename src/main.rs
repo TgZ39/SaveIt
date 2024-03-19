@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 #![allow(non_snake_case)]
 
-use crate::args::Args;
+use crate::args::{CliArgs, VerbosityLevel};
 use crate::config::CONFIG_NAME;
 use clap::Parser;
 use directories::ProjectDirs;
@@ -20,17 +20,23 @@ mod source;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Parse CLI arguments
+    let args = CliArgs::parse();
+
     // setup logging (tracing)
     let subscriber = tracing_subscriber::fmt()
         .with_file(false)
         .with_line_number(false)
-        .with_max_level(Level::INFO)
+        .with_max_level(match args.verbosity {
+            VerbosityLevel::TRACE => Level::TRACE,
+            VerbosityLevel::DEBUG => Level::DEBUG,
+            VerbosityLevel::INFO => Level::INFO,
+            VerbosityLevel::WARN => Level::WARN,
+            VerbosityLevel::ERROR => Level::ERROR,
+        })
         .finish();
 
     subscriber::set_global_default(subscriber).unwrap();
-
-    // Parse CLI arguments
-    let args = Args::parse();
 
     if args.reset_database || args.reset_config {
         if args.reset_database {
