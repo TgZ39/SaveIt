@@ -17,7 +17,7 @@ If you are updating from version `x.y.z` to a version with a higher `x` or `y` t
 Screenshots
 ---
 
-![grafik](https://github.com/TgZ39/Saveit/assets/71944761/104f4e0c-f3b0-454d-a894-36a264f14fb1)
-![grafik](https://github.com/TgZ39/Saveit/assets/71944761/09e386a6-6e57-4c66-ab19-db2be4b1b1b1)
-![grafik](https://github.com/TgZ39/Saveit/assets/71944761/6c491fac-ae0f-404c-a436-795d21473191)
-![grafik](https://github.com/TgZ39/Saveit/assets/71944761/c5dc2ad1-1128-4e6c-a472-75ceef36617b)
+![grafik](https://github.com/TgZ39/SaveIt/assets/71944761/5a1f05d9-eafb-4a1f-9998-b0b5e9c28f07)
+![grafik](https://github.com/TgZ39/SaveIt/assets/71944761/10affc9e-f282-4c49-a3a7-336efacaa8db)
+![grafik](https://github.com/TgZ39/SaveIt/assets/71944761/12826085-79fe-4d2b-bfb5-b7845d12193d)
+![grafik](https://github.com/TgZ39/SaveIt/assets/71944761/07dfcc11-1121-4f32-a83a-6c06b4f54612)
