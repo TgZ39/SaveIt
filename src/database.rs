@@ -1,12 +1,11 @@
 use std::fs::create_dir_all;
 
-use crate::config::{Config, FormatStandard};
 use crate::source::Source;
 use crate::ui::Application;
-use chrono::{Local, NaiveDate};
+
 use directories::ProjectDirs;
 use sqlx::migrate::MigrateDatabase;
-use sqlx::{Connection, FromRow, Sqlite, SqliteConnection};
+use sqlx::{Connection, Sqlite, SqliteConnection};
 use tracing::*;
 
 #[macro_export]
