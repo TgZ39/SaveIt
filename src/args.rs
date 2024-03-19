@@ -7,7 +7,7 @@ pub struct CliArgs {
     #[clap(long, action)]
     pub reset_config: bool,
 
-    /// Reset the source database
+    /// Resets the source database
     #[clap(long, action)]
     pub reset_database: bool,
 
