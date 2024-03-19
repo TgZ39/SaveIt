@@ -5,5 +5,6 @@ CREATE TABLE if NOT EXISTS sources (
     author TEXT,
     published_date DATE,
     viewed_date DATE,
-    published_date_unknown BOOLEAN
+    published_date_unknown BOOLEAN,
+    comment TEXT
 );

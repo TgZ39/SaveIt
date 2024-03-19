@@ -8,10 +8,14 @@ use chrono::{Local, NaiveDate};
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextEdit, TextFormat, Ui, FontFamily};
+use egui::{
+    text, CentralPanel, ComboBox, Context, FontFamily, FontId, Grid, TextEdit, TextFormat, Ui,
+};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
+
+const TEXT_INPUT_WIDTH: f32 = 450.0;
 
 pub struct Application {
     pub input_title: String,
@@ -20,6 +24,7 @@ pub struct Application {
     pub input_published_date: NaiveDate,
     input_published_disabled: bool,
     pub input_viewed_date: NaiveDate,
+    pub input_comment: String,
     curr_page: AppPage,
     sources_cache: Arc<RwLock<Vec<Source>>>,
     // cache needed because every time the user interacted (e.g. mouse movement) with the ui, a new DB request would be made. (30-60/s)
@@ -35,8 +40,8 @@ pub fn open_gui() -> Result<(), eframe::Error> {
     env_logger::init();
 
     let mut viewport = egui::ViewportBuilder::default()
-        .with_inner_size([500.0, 350.0])
-        .with_min_inner_size([500.0, 350.0]);
+        .with_inner_size([700.0, 500.0])
+        .with_min_inner_size([700.0, 500.0]);
 
     // load icon
     let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png"));
@@ -86,6 +91,7 @@ impl Application {
             input_published_date: NaiveDate::from(Local::now().naive_local()), // Current date
             input_published_disabled: false,
             input_viewed_date: NaiveDate::from(Local::now().naive_local()), // Current date
+            input_comment: String::new(),
             curr_page: AppPage::Start,
             sources_cache: Arc::new(RwLock::new(vec![])),
             edit_windows_open: false,       // edit modal
@@ -105,16 +111,19 @@ impl Application {
             published_date: self.input_published_date,
             viewed_date: self.input_viewed_date,
             published_date_unknown: self.input_published_disabled,
+            comment: self.input_comment.clone(),
         }
     }
 
     // clears text fields and reset date to now
     fn clear_input(&mut self) {
+        self.input_title.clear();
         self.input_url.clear();
         self.input_author.clear();
         self.input_published_date = NaiveDate::from(Local::now().naive_local());
         self.input_viewed_date = NaiveDate::from(Local::now().naive_local());
         self.input_published_disabled = false;
+        self.input_comment.clear();
     }
 
     fn update_source_cache(&self) {
@@ -185,7 +194,7 @@ impl eframe::App for Application {
 
             // render selected page
             match self.curr_page {
-                AppPage::Start => render_start_page(self, ui, ctx),
+                AppPage::Start => render_start_page(self, ui),
                 AppPage::List => render_list_page(self, ui, ctx),
                 AppPage::Settings => render_settings_page(self, ui),
             }
@@ -193,25 +202,26 @@ impl eframe::App for Application {
     }
 }
 
-fn render_start_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
+fn render_start_page(app: &mut Application, ui: &mut Ui) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
         // input title
         let title_label = ui.label("Title:");
-        ui.text_edit_singleline(&mut app.input_title)
-            .labelled_by(title_label.id);
+        let input_title =
+            TextEdit::singleline(&mut app.input_title).desired_width(TEXT_INPUT_WIDTH);
+        ui.add(input_title).labelled_by(title_label.id);
         ui.end_row();
 
         // input URL
         let url_label = ui.label("URL:");
-        ui.text_edit_singleline(&mut app.input_url)
-            .labelled_by(url_label.id);
+        let input_url = TextEdit::singleline(&mut app.input_url).desired_width(TEXT_INPUT_WIDTH);
+        ui.add(input_url).labelled_by(url_label.id);
         ui.end_row();
 
         // input author
         let author_label = ui.label("Author:");
-
-        let input_author =
-            TextEdit::singleline(&mut app.input_author).hint_text("Leave empty if unknown");
+        let input_author = TextEdit::singleline(&mut app.input_author)
+            .hint_text("Leave empty if unknown")
+            .desired_width(TEXT_INPUT_WIDTH);
         ui.add(input_author).labelled_by(author_label.id);
         ui.end_row();
 
@@ -238,6 +248,13 @@ fn render_start_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
         )
         .labelled_by(viewed_label.id);
         ui.end_row();
+
+        // input comment
+        let comment_label = ui.label("Comment:");
+        let input_comment =
+            TextEdit::multiline(&mut app.input_comment).desired_width(TEXT_INPUT_WIDTH);
+        ui.add(input_comment).labelled_by(comment_label.id);
+        ui.end_row();
     });
 
     ui.add_space(5.0);
@@ -261,7 +278,7 @@ fn configure_fonts(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
 
     style.text_styles = [
-        (Heading, FontId::new(16.0, FontFamily::Proportional)),
+        (Heading, FontId::new(18.0, FontFamily::Proportional)),
         (Body, FontId::new(15.0, FontFamily::Proportional)), // TODO making fontsize above 15 breaks date selection popup
         (Monospace, FontId::new(15.0, FontFamily::Monospace)),
         (Button, FontId::new(15.0, FontFamily::Proportional)),
@@ -358,39 +375,48 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 
                         // edit modal
                         egui::Window::new("Edit source")
+                            .auto_sized()
+                            .resizable(true)
                             .collapsible(false)
                             .open(&mut window_open)
                             .show(ctx, |ui| {
                                 Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
                                     // input title
-                                    let title_label = ui.label("Title: ");
-                                    ui.text_edit_singleline(&mut app.edit_source.title)
-                                        .labelled_by(title_label.id);
+                                    let title_label = ui.label("Title:");
+                                    let input_title =
+                                        TextEdit::singleline(&mut app.edit_source.title)
+                                            .desired_width(TEXT_INPUT_WIDTH);
+                                    ui.add(input_title).labelled_by(title_label.id);
                                     ui.end_row();
 
                                     // input URL
-                                    let url_label = ui.label("URL: ");
-                                    ui.text_edit_multiline(&mut app.edit_source.url)
-                                        .labelled_by(url_label.id);
+                                    let url_label = ui.label("URL:");
+                                    let input_url = TextEdit::singleline(&mut app.edit_source.url)
+                                        .desired_width(TEXT_INPUT_WIDTH);
+                                    ui.add(input_url).labelled_by(url_label.id);
                                     ui.end_row();
 
                                     // input author
-                                    let author_label = ui.label("Author: ");
-                                    ui.text_edit_singleline(&mut app.edit_source.author)
-                                        .labelled_by(author_label.id);
+                                    let author_label = ui.label("Author:");
+                                    let input_author =
+                                        TextEdit::singleline(&mut app.edit_source.author)
+                                            .hint_text("Leave empty if unknown")
+                                            .desired_width(TEXT_INPUT_WIDTH);
+                                    ui.add(input_author).labelled_by(author_label.id);
                                     ui.end_row();
 
-                                    let published_date_label = ui.label("Date published: ");
+                                    // input published date
+                                    let published_label = ui.label("Date published:");
                                     ui.horizontal(|ui| {
-                                        // input published date
                                         ui.add_enabled(
                                             !app.edit_source.published_date_unknown,
                                             DatePickerButton::new(
                                                 &mut app.edit_source.published_date,
                                             )
-                                            .id_source("InputPublishedDate"),
+                                            .id_source("InputPublishedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+                                            .show_icon(false),
                                         )
-                                        .labelled_by(published_date_label.id);
+                                        .labelled_by(published_label.id);
                                         ui.checkbox(
                                             &mut app.edit_source.published_date_unknown,
                                             "Unknown",
@@ -399,12 +425,21 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                     ui.end_row();
 
                                     // input viewed date
-                                    let viewed_date_label = ui.label("Date viewed: ");
+                                    let viewed_label = ui.label("Date viewed:");
                                     ui.add(
                                         DatePickerButton::new(&mut app.edit_source.viewed_date)
-                                            .id_source("InputViewedDate"),
+                                            .id_source("InputViewedDate") // needs to be set otherwise the UI would bug with multiple date pickers
+                                            .show_icon(false),
                                     )
-                                    .labelled_by(viewed_date_label.id);
+                                    .labelled_by(viewed_label.id);
+                                    ui.end_row();
+
+                                    // input comment
+                                    let comment_label = ui.label("Comment:");
+                                    let input_comment =
+                                        TextEdit::multiline(&mut app.edit_source.comment)
+                                            .desired_width(TEXT_INPUT_WIDTH);
+                                    ui.add(input_comment).labelled_by(comment_label.id);
                                     ui.end_row();
                                 });
 

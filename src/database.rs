@@ -18,6 +18,7 @@ pub struct Source {
     pub published_date: NaiveDate,
     pub viewed_date: NaiveDate,
     pub published_date_unknown: bool,
+    pub comment: String,
 }
 
 impl Source {
@@ -86,6 +87,7 @@ impl Default for Source {
             published_date: chrono::NaiveDate::from(Local::now().naive_local()), // current date
             viewed_date: chrono::NaiveDate::from(Local::now().naive_local()),    // current date
             published_date_unknown: false,
+            comment: String::new(),
         }
     }
 }
@@ -133,13 +135,14 @@ pub async fn insert_source(source: &Source) -> Result<(), sqlx::Error> {
 
     debug!("Inserting source into database: {:#?}", &source);
 
-    sqlx::query("INSERT INTO sources (title, url, author, published_date, viewed_date, published_date_unknown) VALUES ($1, $2, $3, $4, $5, $6)")
+    sqlx::query("INSERT INTO sources (title, url, author, published_date, viewed_date, published_date_unknown, comment) VALUES ($1, $2, $3, $4, $5, $6, $7)")
         .bind(&source.title)
         .bind(&source.url)
         .bind(&source.author)
         .bind(source.published_date)
         .bind(source.viewed_date)
         .bind(source.published_date_unknown)
+        .bind(&source.comment)
         .execute(&mut conn)
         .await?;
 
@@ -175,13 +178,14 @@ pub async fn update_source(id: i64, source: &Source) -> Result<(), sqlx::Error> 
 
     let mut conn = establish_connection().await?;
 
-    let res = sqlx::query("UPDATE sources SET title = $1, url = $2, author = $3, published_date = $4, viewed_date = $5, published_date_unknown = $6 WHERE id = $7")
+    let res = sqlx::query("UPDATE sources SET title = $1, url = $2, author = $3, published_date = $4, viewed_date = $5, published_date_unknown = $6, comment = $7 WHERE id = $8")
         .bind(&source.title)
         .bind(&source.url)
         .bind(&source.author)
         .bind(source.published_date)
         .bind(source.viewed_date)
         .bind(source.published_date_unknown)
+        .bind(&source.comment)
         .bind(id)
         .execute(&mut conn)
         .await;
