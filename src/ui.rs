@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::fmt::{Display, Formatter};
 use std::sync::{Arc, RwLock};
 
@@ -6,9 +7,8 @@ use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
 use egui::scroll_area::ScrollBarVisibility;
 use egui::text::LayoutJob;
-use egui::FontFamily::Proportional;
 use egui::TextStyle::*;
-use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextEdit, TextFormat, Ui};
+use egui::{text, CentralPanel, ComboBox, Context, FontId, Grid, TextEdit, TextFormat, Ui, FontFamily};
 use egui_extras::DatePickerButton;
 
 use crate::database::{delete_source, get_all_sources, insert_source, update_source, Source};
@@ -185,7 +185,7 @@ impl eframe::App for Application {
 
             // render selected page
             match self.curr_page {
-                AppPage::Start => render_start_page(self, ui),
+                AppPage::Start => render_start_page(self, ui, ctx),
                 AppPage::List => render_list_page(self, ui, ctx),
                 AppPage::Settings => render_settings_page(self, ui),
             }
@@ -193,7 +193,7 @@ impl eframe::App for Application {
     }
 }
 
-fn render_start_page(app: &mut Application, ui: &mut Ui) {
+fn render_start_page(app: &mut Application, ui: &mut Ui, ctx: &Context) {
     Grid::new("SourceInput").num_columns(2).show(ui, |ui| {
         // input title
         let title_label = ui.label("Title:");
@@ -227,7 +227,6 @@ fn render_start_page(app: &mut Application, ui: &mut Ui) {
             .labelled_by(published_label.id);
             ui.checkbox(&mut app.input_published_disabled, "Unknown");
         });
-
         ui.end_row();
 
         // input viewed date
@@ -262,11 +261,11 @@ fn configure_fonts(ctx: &Context) {
     let mut style = (*ctx.style()).clone();
 
     style.text_styles = [
-        (Heading, FontId::default()),
-        (Body, FontId::new(15.0, Proportional)), // TODO making fontsize above 15 breaks date selection popup
-        (Monospace, FontId::default()),
-        (Button, FontId::default()),
-        (Small, FontId::default()),
+        (Heading, FontId::new(16.0, FontFamily::Proportional)),
+        (Body, FontId::new(15.0, FontFamily::Proportional)), // TODO making fontsize above 15 breaks date selection popup
+        (Monospace, FontId::new(15.0, FontFamily::Monospace)),
+        (Button, FontId::new(15.0, FontFamily::Proportional)),
+        (Small, FontId::new(16.0, FontFamily::Proportional)),
     ]
     .into();
 
@@ -392,7 +391,6 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
                                             .id_source("InputPublishedDate"),
                                         )
                                         .labelled_by(published_date_label.id);
-
                                         ui.checkbox(
                                             &mut app.edit_source.published_date_unknown,
                                             "Unknown",
