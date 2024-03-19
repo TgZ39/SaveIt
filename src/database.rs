@@ -54,13 +54,7 @@ impl Source {
                 );
 
                 out
-            }
-            FormatStandard::IEEE => {
-                todo!()
-            }
-            FormatStandard::APA => {
-                todo!()
-            }
+            },
             FormatStandard::Custom => {
                 let config = Config::get_config();
 

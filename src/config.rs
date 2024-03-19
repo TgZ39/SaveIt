@@ -47,7 +47,5 @@ impl Config {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum FormatStandard {
     Default,
-    IEEE,
-    APA,
     Custom,
 }

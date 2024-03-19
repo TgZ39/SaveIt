@@ -547,8 +547,6 @@ fn render_settings_page(app: &mut Application, ui: &mut Ui) {
                 FormatStandard::Default,
                 "Default",
             );
-            ui.selectable_value(&mut app.input_format_standard, FormatStandard::IEEE, "IEEE");
-            ui.selectable_value(&mut app.input_format_standard, FormatStandard::APA, "APA");
             ui.selectable_value(
                 &mut app.input_format_standard,
                 FormatStandard::Custom,
