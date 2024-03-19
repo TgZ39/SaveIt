@@ -9,6 +9,8 @@ mod config;
 mod database;
 mod ui;
 
+mod source;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // setup logging (tracing)
