@@ -108,7 +108,7 @@ pub fn open_gui() -> Result<(), eframe::Error> {
 
     let mut viewport = egui::ViewportBuilder::default()
         .with_inner_size([700.0, 500.0])
-        .with_min_inner_size([700.0, 500.0]);
+        .with_min_inner_size([590.0, 280.0]);
 
     // load icon
     let icon = eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon.png"));
