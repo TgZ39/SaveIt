@@ -10,9 +10,23 @@ use crate::database::{handle_delete_source, handle_update_source};
 use crate::ui::{set_all_clipboard, set_clipboard, Application, TEXT_INPUT_WIDTH};
 
 pub fn render(app: &mut Application, ui: &mut Ui, ctx: &Context) {
-    if ui.button("Copy all").clicked() {
-        set_all_clipboard(&app.sources_cache.read().unwrap(), app);
-    }
+    ui.horizontal(|ui| {
+        // Copy all button
+        if ui.button("Copy all").clicked() {
+            set_all_clipboard(&app.sources_cache.read().unwrap(), app);
+        }
+
+        // Search bar
+        let input_search = TextEdit::singleline(&mut app.search_query)
+            .hint_text("Search")
+            .desired_width(TEXT_INPUT_WIDTH);
+        ui.add(input_search);
+
+        // Clear button
+        if ui.button("Clear").clicked() {
+            app.search_query.clear();
+        }
+    });
 
     ui.add_space(10.0);
 
@@ -36,6 +50,10 @@ fn render_sources(app: &mut Application, ui: &mut Ui, ctx: &Context) {
 
             #[allow(clippy::unnecessary_to_owned)]
             for source in app.sources_cache.clone().read().unwrap().to_vec() {
+                if !app.search_query.is_empty() && !source.contains(&app.search_query) {
+                    continue;
+                }
+
                 // source preview
                 ui.vertical(|ui| {
                     let id = format!("Index: {}", &source.id);

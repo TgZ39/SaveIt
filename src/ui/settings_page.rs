@@ -23,8 +23,8 @@ pub fn render(app: &mut Application, ui: &mut Ui) {
 
     ui.horizontal(|ui| {
         let custom_label = ui.label("Custom format:");
-        let input_custom_format = TextEdit::singleline(&mut app.input_custom_format)
-            .desired_width(TEXT_INPUT_WIDTH);
+        let input_custom_format =
+            TextEdit::singleline(&mut app.input_custom_format).desired_width(TEXT_INPUT_WIDTH);
 
         #[allow(clippy::match_like_matches_macro)] // clippy complaining again LOL
         let custom_format_enabled = match app.input_format_standard {

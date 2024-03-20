@@ -66,6 +66,16 @@ impl Source {
             }
         }
     }
+
+    pub fn contains(&self, query: &str) -> bool {
+        if self.title.to_lowercase().contains(&query.to_lowercase())
+            || self.url.to_lowercase().contains(&query.to_lowercase())
+            || self.author.to_lowercase().contains(&query.to_lowercase())
+        {
+            return true;
+        }
+        false
+    }
 }
 
 impl Default for Source {

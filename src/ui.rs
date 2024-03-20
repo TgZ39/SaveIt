@@ -36,6 +36,7 @@ pub struct Application {
     edit_source: Source,
     input_format_standard: FormatStandard,
     input_custom_format: String,
+    search_query: String,
 }
 
 impl Application {
@@ -60,6 +61,7 @@ impl Application {
             edit_source: Source::default(), // source to edit in the edit modal
             input_format_standard: config.format_standard,
             input_custom_format: config.custom_format,
+            search_query: String::new(),
         }
     }
 
