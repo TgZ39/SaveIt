@@ -12,7 +12,26 @@ Features
 Updating
 ---
 
-If you are updating from version `x.y.z` to a version with a higher `x` or `y` then your saved sources **will not show up** in the new version of the app, because some changes have been made to the database which makes these versions not compatible with each other. If you want to continue working on your old sources **just launch the old version of the app** (the one you used previously). If you want to get your sources from the old version to the new one, you will have to copy them manually.
+If you are updating from version `x.y.z` to a version with a higher `x` or `y` then your saved sources **will not show up** in the new version of the app.
+This is because changes have been made to the database which makes these versions not compatible with each other.
+If you want to continue working on your old sources **just launch the old version of the app** (the one you used previously).
+If you want to get your sources from the old version to the new one, you will have to copy them manually.
+
+Usage
+---
+On windows you won't be able to see any output if you run the program with any parameters but they will still be read by the program.
+Running the program with any parameters in **not required** you can just doubleclick the executable. These options mostly just exist for debugging purposes.
+```
+Usage: SaveIt.exe [OPTIONS]
+
+Options:
+      --reset-config           Resets the config
+      --reset-database         Resets the source database
+      --verbosity <VERBOSITY>  Set logging verbosity level [default: info] [possible values: trace, debug, info, warn, error]
+  -h, --help                   Print help
+  -V, --version                Print version
+```
+
 
 Screenshots
 ---
