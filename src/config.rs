@@ -6,8 +6,7 @@ pub const CONFIG_NAME: &str = "save-it";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-    pub ui_lang: String,
-    pub source_lang: String,
+    pub language: String,
     pub format_standard: FormatStandard,
     pub custom_format: String,
 }
@@ -17,8 +16,7 @@ impl Default for Config {
         trace!("Creating new config");
 
         Self {
-            ui_lang: "en".to_string(),
-            source_lang: "en".to_string(),
+            language: "en".to_string(),
             format_standard: FormatStandard::Default,
             custom_format: "CUSTOM FORMAT".to_string(),
         }
