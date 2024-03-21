@@ -4,6 +4,7 @@ use std::sync::{Arc, RwLock};
 
 use arboard::Clipboard;
 use chrono::{Local, NaiveDate};
+use eframe::Theme;
 use egui::TextStyle::*;
 use egui::{CentralPanel, Context, FontFamily, FontId};
 use tracing::*;
@@ -121,6 +122,7 @@ pub fn open_gui() -> Result<(), eframe::Error> {
 
     let options = eframe::NativeOptions {
         viewport,
+        default_theme: Theme::Dark,
         ..Default::default()
     };
 
