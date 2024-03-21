@@ -22,3 +22,4 @@ serde = { version = "1.0.197", features = ["derive"] }
 confy = "0.6.1"
 log = "0.4.21"
 clap = { version = "4.5.3", features = ["derive"] }
+regex = "1.10.3"

@@ -1,4 +1,5 @@
 use chrono::{Local, NaiveDate};
+use regex::Regex;
 use sqlx::FromRow;
 use tracing::*;
 
@@ -50,17 +51,43 @@ impl Source {
             FormatStandard::Custom => {
                 let config = Config::get_config();
 
+                // get custom date format from string
+                let viewed_date_format = {
+                    let regex = Regex::new(r"\{V_DATE\((?<format>[^)]*)\)\}").unwrap();
+                    match regex.captures(&config.custom_format) {
+                        None => "%d. %m. %Y".to_string(),
+                        Some(cap) => cap["format"].to_string(),
+                    }
+                };
+
+                // get custom date format from string
+                let published_date_format = {
+                    let regex = Regex::new(r"\{P_DATE\((?<format>[^)]*)\)\}").unwrap();
+                    match regex.captures(&config.custom_format) {
+                        None => "%Y".to_string(),
+                        Some(cap) => cap["format"].to_string(),
+                    }
+                };
+
                 let mut out = config.custom_format;
 
                 out = out.replace("{INDEX}", &self.id.to_string());
                 out = out.replace("{TITLE}", &self.title);
                 out = out.replace("{URL}", &self.url);
                 out = out.replace("{AUTHOR}", &self.author);
-                out = out.replace("{P_DATE}", &self.published_date.format("%Y").to_string());
-                out = out.replace(
-                    "{V_DATE}",
-                    &self.viewed_date.format("%d. %m. %Y").to_string(),
-                );
+
+                // replace {P_DATE(*)} with the custom date
+                let regex_pub = Regex::new(r"\{P_DATE\([^)]*\)\}").expect("Fault regex");
+                let pub_date = self
+                    .published_date
+                    .format(&published_date_format)
+                    .to_string();
+                out = regex_pub.replace_all(&out, pub_date).to_string();
+
+                // replace {V_DATE(*)} with the custom date
+                let regex_viewed = Regex::new(r"\{V_DATE\([^)]*\)\}").expect("Fault regex");
+                let viewed_date = self.published_date.format(&viewed_date_format).to_string();
+                out = regex_viewed.replace_all(&out, viewed_date).to_string();
 
                 out
             }
