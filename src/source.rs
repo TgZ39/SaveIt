@@ -56,7 +56,13 @@ impl Source {
                     let regex = Regex::new(r"\{V_DATE\((?<format>[^)]*)\)\}").unwrap();
                     match regex.captures(&config.custom_format) {
                         None => "%d. %m. %Y".to_string(),
-                        Some(cap) => cap["format"].to_string(),
+                        Some(cap) => {
+                            if cap["format"].to_string().is_empty() {
+                                "%d. %m. %Y".to_string()
+                            } else {
+                                cap["format"].to_string()
+                            }
+                        }
                     }
                 };
 
@@ -65,7 +71,13 @@ impl Source {
                     let regex = Regex::new(r"\{P_DATE\((?<format>[^)]*)\)\}").unwrap();
                     match regex.captures(&config.custom_format) {
                         None => "%Y".to_string(),
-                        Some(cap) => cap["format"].to_string(),
+                        Some(cap) => {
+                            if cap["format"].to_string().is_empty() {
+                                "%Y".to_string()
+                            } else {
+                                cap["format"].to_string()
+                            }
+                        }
                     }
                 };
 
