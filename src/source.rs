@@ -53,7 +53,7 @@ impl Source {
 
                 // get custom date format from string
                 let viewed_date_format = {
-                    let regex = Regex::new(r"\{V_DATE\((?<format>[^)]*)\)\}").unwrap();
+                    let regex = Regex::new(r"\{V_DATE\((?<format>[^)]*)\)}").unwrap();
                     match regex.captures(&config.custom_format) {
                         None => "%d. %m. %Y".to_string(),
                         Some(cap) => {
@@ -68,7 +68,7 @@ impl Source {
 
                 // get custom date format from string
                 let published_date_format = {
-                    let regex = Regex::new(r"\{P_DATE\((?<format>[^)]*)\)\}").unwrap();
+                    let regex = Regex::new(r"\{P_DATE\((?<format>[^)]*)\)}").unwrap();
                     match regex.captures(&config.custom_format) {
                         None => "%Y".to_string(),
                         Some(cap) => {
@@ -89,7 +89,7 @@ impl Source {
                 out = out.replace("{AUTHOR}", &self.author);
 
                 // replace {P_DATE(*)} with the custom date
-                let regex_pub = Regex::new(r"\{P_DATE\([^)]*\)\}").expect("Fault regex");
+                let regex_pub = Regex::new(r"\{P_DATE\([^)]*\)}").expect("Fault regex");
                 let pub_date = self
                     .published_date
                     .format(&published_date_format)
@@ -97,7 +97,7 @@ impl Source {
                 out = regex_pub.replace_all(&out, pub_date).to_string();
 
                 // replace {V_DATE(*)} with the custom date
-                let regex_viewed = Regex::new(r"\{V_DATE\([^)]*\)\}").expect("Fault regex");
+                let regex_viewed = Regex::new(r"\{V_DATE\([^)]*\)}").expect("Fault regex");
                 let viewed_date = self.published_date.format(&viewed_date_format).to_string();
                 out = regex_viewed.replace_all(&out, viewed_date).to_string();
 
