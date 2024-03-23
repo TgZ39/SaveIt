@@ -245,7 +245,7 @@ pub fn set_clipboard(source: &Source, app: &Application) {
     clipboard.set_text(text).unwrap();
 }
 
-pub fn set_all_clipboard(sources: &Vec<Source>, app: &Application) {
+pub fn set_all_clipboard(sources: &[Source], app: &Application) {
     debug!("Setting clipboard with all sources");
 
     let mut clipboard = Clipboard::new().unwrap();
