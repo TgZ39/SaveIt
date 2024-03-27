@@ -11,12 +11,11 @@ use tracing::*;
 use crate::database::establish_connection;
 use crate::ui::open_gui;
 
+mod args;
 mod config;
 mod database;
-mod ui;
-
-mod args;
 mod source;
+mod ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
